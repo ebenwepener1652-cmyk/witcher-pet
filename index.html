@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#120d08">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Witcher Pet — Baby Geralt</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#120d08; --panel:#1e1610; --panel2:#2a1f15; --edge:#4a3722;
+  --gold:#c9a227; --gold2:#e8c558; --text:#e8dcc8; --dim:#9c8a6e;
+  --red:#b03a2e; --green:#5a8f3c; --blue:#3c6e8f; --purple:#7a4a8f;
+  --tox:#7fbf3f; --hp:#c0392b; --food:#d35400; --zzz:#5dade2; --joy:#f1c40f; --soap:#85c1e9;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:Georgia,'Times New Roman',serif;touch-action:manipulation}
+#c3d{position:fixed;inset:0;z-index:0}
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#topbar{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:8px 10px;
+  background:linear-gradient(180deg,rgba(10,7,4,.92),rgba(10,7,4,.55) 80%,transparent)}
+#wolfIcon{width:34px;height:34px;flex:none}
+#nameBlock{flex:1;min-width:0}
+#petName{font-size:15px;color:var(--gold2);font-weight:bold;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stageLabel{font-size:11px;color:var(--dim)}
+#lvlBadge{text-align:right}
+#lvlNum{font-size:14px;color:var(--gold2);font-weight:bold}
+#xpBarWrap{width:74px;height:5px;background:#000;border:1px solid var(--edge);border-radius:3px;margin-top:3px}
+#xpBar{height:100%;width:0%;background:var(--gold);border-radius:2px;transition:width .4s}
+#crowns{display:flex;align-items:center;gap:4px;font-size:14px;color:var(--gold2);margin-left:6px}
+#statRow{pointer-events:auto;display:flex;gap:5px;padding:4px 10px 6px;
+  background:linear-gradient(180deg,rgba(10,7,4,.55),transparent)}
+.stat{flex:1;min-width:0}
+.stat .sIcon{font-size:12px;text-align:center;line-height:1}
+.sBarWrap{height:7px;background:rgba(0,0,0,.7);border:1px solid var(--edge);border-radius:4px;margin-top:2px;overflow:hidden}
+.sBar{height:100%;width:100%;border-radius:3px;transition:width .5s,background .5s}
+#spacer{flex:1;pointer-events:none}
+/* ---------- log toasts ---------- */
+#logArea{pointer-events:none;position:fixed;left:0;right:0;bottom:118px;display:flex;flex-direction:column;
+  align-items:center;gap:5px;z-index:11;padding:0 14px}
+.toast{background:rgba(18,13,8,.92);border:1px solid var(--edge);color:var(--text);font-size:13px;
+  padding:7px 14px;border-radius:8px;max-width:94%;text-align:center;animation:tIn .25s ease-out;box-shadow:0 2px 8px rgba(0,0,0,.6)}
+.toast.gold{color:var(--gold2);border-color:var(--gold)}
+.toast.bad{color:#e07b6f;border-color:var(--red)}
+@keyframes tIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+/* ---------- action bar ---------- */
+#actionBar{pointer-events:auto;display:flex;gap:7px;overflow-x:auto;padding:10px 10px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(0deg,rgba(10,7,4,.95) 60%,transparent);scrollbar-width:none}
+#actionBar::-webkit-scrollbar{display:none}
+.abtn{flex:none;width:64px;height:72px;background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--edge);border-radius:10px;color:var(--text);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;font-family:inherit;font-size:10.5px;cursor:pointer;position:relative}
+.abtn .em{font-size:24px;line-height:1}
+.abtn:active{transform:scale(.94);background:var(--panel2)}
+.abtn.locked{opacity:.38;filter:grayscale(.8)}
+.abtn .dot{position:absolute;top:5px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--red);
+  box-shadow:0 0 6px var(--red);display:none}
+/* ---------- modal ---------- */
+#modalWrap{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:none;
+  align-items:flex-end;justify-content:center}
+#modalWrap.show{display:flex}
+#modal{width:100%;max-width:520px;max-height:86vh;background:linear-gradient(180deg,#241a10,#170f08);
+  border:1px solid var(--edge);border-bottom:none;border-radius:18px 18px 0 0;display:flex;flex-direction:column;
+  animation:mUp .22s ease-out;padding-bottom:env(safe-area-inset-bottom)}
+@keyframes mUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+#modalHead{display:flex;align-items:center;padding:14px 16px 10px;border-bottom:1px solid var(--edge)}
+#modalTitle{flex:1;font-size:17px;color:var(--gold2);letter-spacing:.5px}
+#modalClose{background:none;border:1px solid var(--edge);color:var(--dim);width:30px;height:30px;border-radius:50%;
+  font-size:15px;cursor:pointer;font-family:inherit}
+#modalBody{overflow-y:auto;padding:12px 14px 18px;font-size:14px;line-height:1.45}
+/* shared widgets inside modals */
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;margin-bottom:9px}
+.rowFlex{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.btn{background:linear-gradient(180deg,#3a2c1a,#2a1f12);border:1px solid var(--gold);color:var(--gold2);
+  font-family:inherit;font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.4;border-color:var(--edge);color:var(--dim)}
+.btn.danger{border-color:var(--red);color:#e07b6f}
+.btn.small{font-size:12px;padding:5px 10px}
+.muted{color:var(--dim);font-size:12px}
+.title2{color:var(--gold);font-size:14px;margin:10px 0 6px;letter-spacing:.4px}
+.pill{display:inline-block;background:#000;border:1px solid var(--edge);border-radius:20px;
+  padding:2px 9px;font-size:11px;color:var(--dim);margin:2px 3px 2px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* ---------- story overlay ---------- */
+#storyWrap{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.86);display:none;align-items:center;
+  justify-content:center;padding:20px}
+#storyWrap.show{display:flex}
+#storyBox{max-width:480px;width:100%;background:linear-gradient(180deg,#241a10,#120d08);border:2px solid var(--gold);
+  border-radius:14px;padding:22px;box-shadow:0 0 40px rgba(201,162,39,.25);animation:mUp .3s ease-out}
+#storyChapter{color:var(--dim);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+#storyTitle{color:var(--gold2);font-size:20px;margin-bottom:12px}
+#storyText{font-size:14.5px;line-height:1.6;margin-bottom:18px;color:var(--text)}
+#storyBtns{display:flex;flex-direction:column;gap:8px}
+/* ---------- combat ---------- */
+#combatHud{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;pointer-events:none;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#combatHud.show{display:flex}
+#enemyPlate{pointer-events:auto;margin:10px auto 0;background:rgba(10,7,4,.88);border:1px solid var(--red);
+  border-radius:10px;padding:8px 16px;text-align:center;min-width:220px}
+#enemyName{color:#e07b6f;font-size:15px;font-weight:bold}
+#enemyHpWrap{height:9px;background:#000;border:1px solid var(--edge);border-radius:5px;margin-top:5px;overflow:hidden}
+#enemyHp{height:100%;width:100%;background:var(--red);transition:width .4s}
+#enemyNote{font-size:11px;color:var(--dim);margin-top:3px}
+#combatSpacer{flex:1}
+#combatLog{pointer-events:none;text-align:center;font-size:13.5px;color:var(--text);text-shadow:0 1px 3px #000;
+  padding:0 16px;margin-bottom:8px;min-height:38px}
+#combatBtns{pointer-events:auto;display:flex;gap:7px;overflow-x:auto;padding:8px 10px calc(14px + env(safe-area-inset-bottom));
+  background:linear-gradient(0deg,rgba(10,7,4,.95) 60%,transparent);scrollbar-width:none}
+#combatBtns::-webkit-scrollbar{display:none}
+#playerPlate{pointer-events:none;position:fixed;left:12px;bottom:112px;background:rgba(10,7,4,.85);
+  border:1px solid var(--edge);border-radius:9px;padding:6px 12px;font-size:12px}
+.shieldTag{color:#f7e08b}
+/* ---------- gwent ---------- */
+#gwentWrap{position:fixed;inset:0;z-index:60;background:#0d1a0d;display:none;flex-direction:column;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  background:radial-gradient(ellipse at 50% 30%,#1c2a18,#0b120a)}
+#gwentWrap.show{display:flex}
+.gSide{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:4px 8px;min-height:0}
+.gRow{display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.32);border:1px solid #2c3c24;
+  border-radius:8px;min-height:46px;padding:3px 6px;overflow-x:auto;scrollbar-width:none}
+.gRow::-webkit-scrollbar{display:none}
+.gRow.weatherOn{box-shadow:inset 0 0 18px rgba(120,170,255,.35);border-color:#4a6a9a}
+.gRowScore{flex:none;width:26px;height:26px;border-radius:50%;background:#000;border:1px solid var(--edge);
+  display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--gold2)}
+#gMid{flex:none;display:flex;align-items:center;gap:10px;padding:5px 12px;background:rgba(0,0,0,.5);
+  border-top:1px solid #2c3c24;border-bottom:1px solid #2c3c24}
+#gScores{flex:1;font-size:13px}
+#gWeatherZone{display:flex;gap:4px}
+#gPassBtn{flex:none}
+#gHand{flex:none;display:flex;gap:6px;overflow-x:auto;padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(0,0,0,.55);min-height:96px;scrollbar-width:none}
+#gHand::-webkit-scrollbar{display:none}
+.gCard{flex:none;width:62px;height:84px;background:linear-gradient(180deg,#2e2418,#1c1208);border:1px solid var(--edge);
+  border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:5px 3px;cursor:pointer;position:relative}
+.gCard.hero{border-color:var(--gold);box-shadow:0 0 8px rgba(201,162,39,.4)}
+.gCard.weatherC{border-color:#4a6a9a}
+.gCard .gp{font-size:16px;font-weight:bold;color:var(--gold2)}
+.gCard .gn{font-size:8.5px;text-align:center;color:var(--text);line-height:1.15}
+.gCard .gr{font-size:11px;color:var(--dim)}
+.gCard.small{width:38px;height:52px;cursor:default}
+.gCard.small .gp{font-size:12px}
+.gCard.small .gn{display:none}
+.gCard.small .gr{font-size:9px}
+.gCard.sel{transform:translateY(-8px);border-color:var(--gold2)}
+#gMsg{position:fixed;left:0;right:0;top:42%;text-align:center;z-index:65;pointer-events:none;
+  font-size:18px;color:var(--gold2);text-shadow:0 2px 6px #000;opacity:0;transition:opacity .3s}
+/* misc */
+#nightTint{position:fixed;inset:0;z-index:5;pointer-events:none;background:#0a1430;opacity:0;transition:opacity 2s}
+#sleepZ{position:fixed;z-index:12;font-size:26px;color:var(--zzz);pointer-events:none;display:none;
+  text-shadow:0 0 8px rgba(93,173,226,.6);animation:zFloat 2.2s infinite ease-in-out}
+@keyframes zFloat{0%{transform:translateY(0);opacity:.3}50%{opacity:1}100%{transform:translateY(-26px);opacity:0}}
+.invItem{display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid rgba(74,55,34,.5)}
+.invItem .em{font-size:22px;width:30px;text-align:center}
+input[type=text]{background:#000;border:1px solid var(--edge);color:var(--text);font-family:inherit;
+  font-size:15px;padding:9px 12px;border-radius:8px;width:100%}
+.choiceBtn{background:linear-gradient(180deg,#3a2c1a,#241a10);border:1px solid var(--gold);color:var(--text);
+  font-family:inherit;font-size:14px;padding:11px 14px;border-radius:9px;cursor:pointer;text-align:left;line-height:1.4}
+.choiceBtn:active{transform:scale(.97)}
+.skillRow{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid rgba(74,55,34,.5)}
+.skillPips{display:flex;gap:3px}
+.pip{width:10px;height:10px;border-radius:50%;border:1px solid var(--gold);background:transparent}
+.pip.on{background:var(--gold)}
+#bootScreen{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center}
+#bootScreen h1{color:var(--gold2);font-size:26px;letter-spacing:1px}
+#bootScreen .sub{color:var(--dim);font-size:13px;max-width:300px;line-height:1.5}
+</style>
+</head>
+<body>
+<canvas id="c3d"></canvas>
+<div id="nightTint"></div>
+<div id="sleepZ">💤</div>
+
+<div id="hud">
+  <div id="topbar">
+    <svg id="wolfIcon" viewBox="0 0 64 64"><path fill="#c9a227" d="M32 6 18 16l-8-6 4 16-6 10 12 4 4 14 8-8 8 8 4-14 12-4-6-10 4-16-8 6Zm0 12 8 8-3 10h-10l-3-10Z"/></svg>
+    <div id="nameBlock">
+      <div id="petName">Geralt</div>
+      <div id="stageLabel">Infant · Kaer Morhen</div>
+    </div>
+    <div id="crowns">🪙<span id="crownNum">0</span></div>
+    <div id="lvlBadge">
+      <div id="lvlNum">Lv 1</div>
+      <div id="xpBarWrap"><div id="xpBar"></div></div>
+    </div>
+  </div>
+  <div id="statRow">
+    <div class="stat"><div class="sIcon">❤️</div><div class="sBarWrap"><div class="sBar" id="bHealth" style="background:var(--hp)"></div></div></div>
+    <div class="stat"><div class="sIcon">🍗</div><div class="sBarWrap"><div class="sBar" id="bHunger" style="background:var(--food)"></div></div></div>
+    <div class="stat"><div class="sIcon">⚡</div><div class="sBarWrap"><div class="sBar" id="bEnergy" style="background:var(--joy)"></div></div></div>
+    <div class="stat"><div class="sIcon">😊</div><div class="sBarWrap"><div class="sBar" id="bHappy" style="background:var(--green)"></div></div></div>
+    <div class="stat"><div class="sIcon">🧼</div><div class="sBarWrap"><div class="sBar" id="bClean" style="background:var(--soap)"></div></div></div>
+    <div class="stat"><div class="sIcon">☠️</div><div class="sBarWrap"><div class="sBar" id="bTox" style="background:var(--tox)"></div></div></div>
+  </div>
+  <div id="spacer"></div>
+  <div id="actionBar"></div>
+</div>
+
+<div id="logArea"></div>
+
+<div id="modalWrap"><div id="modal">
+  <div id="modalHead"><div id="modalTitle"></div><button id="modalClose">✕</button></div>
+  <div id="modalBody"></div>
+</div></div>
+
+<div id="storyWrap"><div id="storyBox">
+  <div id="storyChapter"></div>
+  <div id="storyTitle"></div>
+  <div id="storyText"></div>
+  <div id="storyBtns"></div>
+</div></div>
+
+<div id="combatHud">
+  <div id="enemyPlate">
+    <div id="enemyName"></div>
+    <div id="enemyHpWrap"><div id="enemyHp"></div></div>
+    <div id="enemyNote"></div>
+  </div>
+  <div id="combatSpacer"></div>
+  <div id="playerPlate"></div>
+  <div id="combatLog"></div>
+  <div id="combatBtns"></div>
+</div>
+
+<div id="gwentWrap">
+  <div class="gSide" id="gFoeSide">
+    <div class="gRow" id="gFoeSiege"><div class="gRowScore">0</div></div>
+    <div class="gRow" id="gFoeRanged"><div class="gRowScore">0</div></div>
+    <div class="gRow" id="gFoeMelee"><div class="gRowScore">0</div></div>
+  </div>
+  <div id="gMid">
+    <div id="gScores"></div>
+    <div id="gWeatherZone"></div>
+    <button class="btn small" id="gPassBtn">Pass</button>
+    <button class="btn small danger" id="gQuitBtn">Forfeit</button>
+  </div>
+  <div class="gSide" id="gMySide">
+    <div class="gRow" id="gMyMelee"><div class="gRowScore">0</div></div>
+    <div class="gRow" id="gMyRanged"><div class="gRowScore">0</div></div>
+    <div class="gRow" id="gMySiege"><div class="gRowScore">0</div></div>
+  </div>
+  <div id="gHand"></div>
+</div>
+<div id="gMsg"></div>
+
+<div id="bootScreen">
+  <svg width="84" height="84" viewBox="0 0 64 64"><path fill="#c9a227" d="M32 6 18 16l-8-6 4 16-6 10 12 4 4 14 8-8 8 8 4-14 12-4-6-10 4-16-8 6Zm0 12 8 8-3 10h-10l-3-10Z"/></svg>
+  <h1>Witcher Pet</h1>
+  <div class="sub" id="bootSub">A white-haired foundling has been left at the gates of Kaer Morhen…</div>
+  <div id="bootForm" style="display:none;width:100%;max-width:300px">
+    <input type="text" id="nameInput" maxlength="14" placeholder="Name your witcher…" value="Geralt">
+    <button class="btn" id="startBtn" style="width:100%;margin-top:12px">Take him in</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   WITCHER PET — Baby Geralt Tamagotchi
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* ---------------- DATA ---------------- */
+const STAGES=[
+ {key:"infant",   name:"Infant",     minDays:0,  scale:0.62},
+ {key:"child",    name:"Child",      minDays:1,  scale:0.78},
+ {key:"apprentice",name:"Apprentice",minDays:3,  scale:0.92},
+ {key:"witcher",  name:"Witcher",    minDays:6,  scale:1.05}
+];
+
+const FOODS={
+ milk:    {n:"Goat's Milk",e:"🥛",cost:2, hunger:18,happy:4, stages:["infant","child","apprentice","witcher"]},
+ porridge:{n:"Porridge",   e:"🥣",cost:3, hunger:28,happy:2, stages:["infant","child","apprentice","witcher"]},
+ bread:   {n:"Rye Bread",  e:"🍞",cost:4, hunger:30,happy:3, stages:["child","apprentice","witcher"]},
+ apple:   {n:"Apple",      e:"🍎",cost:2, hunger:12,happy:6, stages:["infant","child","apprentice","witcher"]},
+ cheese:  {n:"Smoked Cheese",e:"🧀",cost:6,hunger:35,happy:6, stages:["child","apprentice","witcher"]},
+ meat:    {n:"Roast Venison",e:"🍖",cost:10,hunger:55,happy:10,stages:["apprentice","witcher"]},
+ stew:    {n:"Vesemir's Stew",e:"🍲",cost:8,hunger:50,happy:8, stages:["child","apprentice","witcher"]},
+ honey:   {n:"Honeycomb",  e:"🍯",cost:5, hunger:15,happy:14, stages:["infant","child","apprentice","witcher"]}
+};
+
+const HERBS={
+ celandine:{n:"Celandine",e:"🌼"}, verbena:{n:"Verbena",e:"🌿"},
+ wolfsbane:{n:"Wolfsbane",e:"💐"}, mandrake:{n:"Mandrake Root",e:"🥕"},
+ whitegull:{n:"White Gull",e:"🍶"}, vitriol:{n:"Vitriol",e:"🧂"},
+ drownerbrain:{n:"Drowner Brain",e:"🧠"}, ghoulblood:{n:"Ghoul Blood",e:"🩸"},
+ wraithdust:{n:"Wraith Dust",e:"💨"}, wolfheart:{n:"Werewolf Heart",e:"🫀"},
+ griffinfeather:{n:"Griffin Feather",e:"🪶"}, leshenresin:{n:"Leshen Resin",e:"🟫"}
+};
+
+const POTIONS={
+ swallow:    {n:"Swallow",e:"🧪",tox:25,desc:"Restores 45 health.",
+              recipe:{celandine:2,drownerbrain:1}},
+ cat:        {n:"Cat",e:"🐈",tox:20,desc:"See in the dark — removes night penalty in combat (1 hunt).",
+              recipe:{verbena:1,ghoulblood:1}},
+ thunderbolt:{n:"Thunderbolt",e:"⚡",tox:35,desc:"+50% sword damage for one hunt.",
+              recipe:{wolfsbane:2,vitriol:1}},
+ tawnyowl:   {n:"Tawny Owl",e:"🦉",tox:20,desc:"Restores 50 energy.",
+              recipe:{verbena:2,mandrake:1}},
+ whitehoney: {n:"White Honey",e:"🍯",tox:0,desc:"Purges all toxicity.",
+              recipe:{whitegull:1,mandrake:1}},
+ fullmoon:   {n:"Full Moon",e:"🌕",tox:30,desc:"+40 max vitality for one hunt.",
+              recipe:{wraithdust:1,whitegull:1}}
+};
+
+const OILS={
+ necro: {n:"Necrophage Oil",e:"🫙",desc:"+40% damage vs drowners, ghouls, rotfiends.",
+         recipe:{ghoulblood:1,verbena:2},vs:["drowner","rotfiend","ghoul"]},
+ specter:{n:"Specter Oil",e:"⚱️",desc:"+40% damage vs wraiths and night spirits.",
+         recipe:{wraithdust:1,vitriol:1},vs:["wraith","noonwraith"]},
+ beast: {n:"Beast Oil",e:"🏺",desc:"+40% damage vs wolves and werewolves.",
+         recipe:{wolfsbane:1,wolfheart:1},vs:["wolf","werewolf"]},
+ hybrid:{n:"Hybrid Oil",e:"🍾",desc:"+40% damage vs griffins and forest fiends.",
+         recipe:{griffinfeather:1,vitriol:1},vs:["griffin","leshen","striga"]}
+};
+
+const MONSTERS={
+ wolf:      {n:"Starving Wolf",   e:"🐺",lvl:1, hp:35, atk:6,  xp:18, crowns:[3,8],  loot:["wolfsbane"],sign:"igni"},
+ drowner:   {n:"Drowner",         e:"🧟",lvl:2, hp:50, atk:8,  xp:28, crowns:[6,14], loot:["drownerbrain"],sign:"igni"},
+ nekker:    {n:"Nekker Pack",     e:"👹",lvl:3, hp:65, atk:10, xp:38, crowns:[8,18], loot:["vitriol"],sign:"aard"},
+ ghoul:     {n:"Ghoul",           e:"🧌",lvl:4, hp:80, atk:12, xp:50, crowns:[10,22],loot:["ghoulblood"],sign:"igni"},
+ rotfiend:  {n:"Rotfiend",        e:"🫃",lvl:5, hp:95, atk:14, xp:62, crowns:[12,26],loot:["ghoulblood","vitriol"],sign:"igni"},
+ wraith:    {n:"Wraith",          e:"👻",lvl:6, hp:110,atk:16, xp:78, crowns:[16,32],loot:["wraithdust"],sign:"yrden"},
+ werewolf:  {n:"Werewolf",        e:"🐺",lvl:8, hp:140,atk:20, xp:105,crowns:[24,45],loot:["wolfheart"],sign:"igni"},
+ noonwraith:{n:"Noonwraith",      e:"☀️",lvl:9, hp:155,atk:22, xp:120,crowns:[28,50],loot:["wraithdust"],sign:"yrden"},
+ griffin:   {n:"Royal Griffin",   e:"🦅",lvl:11,hp:190,atk:26, xp:160,crowns:[40,70],loot:["griffinfeather"],sign:"aard"},
+ leshen:    {n:"Ancient Leshen",  e:"🌲",lvl:13,hp:230,atk:30, xp:200,crowns:[55,90],loot:["leshenresin"],sign:"igni"},
+ striga:    {n:"The Striga",      e:"👺",lvl:15,hp:300,atk:34, xp:300,crowns:[120,160],loot:["wolfheart","wraithdust"],sign:"yrden",boss:true}
+};
+
+const SKILLS={
+ igni:  {n:"Igni",   e:"🔥",tree:"Signs", desc:"Stream of fire. Damage scales with rank.",max:3},
+ aard:  {n:"Aard",   e:"💨",tree:"Signs", desc:"Telekinetic blast — chance to stun.",max:3},
+ quen:  {n:"Quen",   e:"🛡️",tree:"Signs", desc:"Protective shield absorbs the next hit.",max:3},
+ yrden: {n:"Yrden",  e:"🟣",tree:"Signs", desc:"Magic trap — weakens spectral foes.",max:3},
+ strength:{n:"Strength",e:"⚔️",tree:"Sword",desc:"+15% sword damage per rank.",max:3},
+ reflex:{n:"Reflexes",e:"🤸",tree:"Sword", desc:"+8% dodge chance per rank.",max:3},
+ tolerance:{n:"Tolerance",e:"☠️",tree:"Alchemy",desc:"Potion toxicity reduced 15% per rank.",max:3},
+ herbalist:{n:"Herbalist",e:"🌿",tree:"Alchemy",desc:"Better yields when foraging.",max:3}
+};
+
+/* ---------------- STORY ---------------- */
+const STORY=[
+ {id:"ch1",ch:"Chapter I",t:"A Child of Destiny",cond:s=>true,
+  txt:"A storm batters the mountain passes of Kaedwen. At the gates of Kaer Morhen, the old witcher Vesemir finds a bundle left by the Law of Surprise — a white-haired infant, eyes squeezed shut against the cold.\n\n«Hmph. Another mouth to feed,» he grumbles. But he carries the child inside, to the fire.\n\nCare for him. Feed him, keep him clean, let him sleep. The Path can wait."},
+ {id:"ch2",ch:"Chapter II",t:"The Witchers' Keep",cond:s=>s.age()>=0.3,
+  txt:"The boy thrives in the draughty halls. Eskel sneaks him honeycomb; Lambert pretends not to care and carves him a wooden wolf.\n\nVesemir watches the child chase chickens across the courtyard. «Strong legs. Good. He'll need them.»\n\nKeep his happiness up — play with him, and he'll grow bold."},
+ {id:"ch3",ch:"Chapter III",t:"First Steps on the Path",cond:s=>s.stageKey()!=="infant",
+  txt:"No longer a babe. Vesemir hands him a wooden sword nearly as tall as he is.\n\n«Training begins at dawn. Every dawn. A witcher's body is his first weapon — the swords come later.»\n\nTRAINING is now unlocked. Train his Strength and Reflexes — it costs energy, so keep him fed and rested. GWENT is also unlocked: the witchers play cards through the long winters."},
+ {id:"ch4",ch:"Chapter IV",t:"The Herbalist's Lesson",cond:s=>s.stageKey()!=="infant"&&s.lvl>=3,
+  txt:"In the keep's laboratory, dusty retorts bubble over blue flame.\n\n«Celandine. Verbena. Wolfsbane,» Vesemir recites. «A witcher who can't brew a Swallow is a dead witcher.»\n\nFORAGING and ALCHEMY are unlocked. Gather herbs in the woods below the keep and brew your first potions. Watch the toxicity — his body is still young."},
+ {id:"ch5",ch:"Chapter V",t:"Signs of Power",cond:s=>s.stageKey()==="apprentice",
+  txt:"The boy stands in the casting circle, palm out, trembling.\n\n«Focus. The Sign is not in the hand — it is in the will.» A spark. A gust. A shimmer of gold.\n\nIgni. Aard. Quen. Yrden. SKILLS are unlocked — earn skill points as he levels and shape what kind of witcher he will become."},
+ {id:"ch6",ch:"Chapter VI",t:"The Trial of the Grasses",cond:s=>s.stageKey()==="apprentice"&&s.lvl>=6&&s.age()>=5,
+  trial:true,
+  txt:"The laboratory beneath Kaer Morhen. Cold stone. Leather straps. Seven elixirs in seven vials.\n\nVesemir's face is grim. «Three in ten survive the Grasses. He is strong — but the choice, such as it is, falls to you.»\n\nIf his HEALTH is high, his chances are good. The Trial will change him forever — golden eyes, a witcher's body. There is no Path without it."},
+ {id:"ch7",ch:"Chapter VII",t:"Golden Eyes",cond:s=>s.trialDone,
+  txt:"He wakes on the third day. The fever is gone. His hair, always pale, is bone-white now — and his eyes are gold, slit like a cat's.\n\n«Welcome back, wolf cub,» Vesemir says quietly. «Now we finish making you a witcher.»\n\nHUNTING is unlocked. Monsters now stalk the valley — and they will come to YOU. Keep silver sharp and Quen ready."},
+ {id:"ch8",ch:"Chapter VIII",t:"The First Hunt",cond:s=>s.trialDone&&s.kills>=1,
+  txt:"His first kill. The drowned thing lies still in the shallows, and the boy's hands have finally stopped shaking.\n\nVesemir claps his shoulder. «Feel nothing? Good. Feel something? Better. Never tell anyone which.»\n\nCONTRACTS are unlocked — take jobs from the notice board for crowns and rare ingredients."},
+ {id:"ch9",ch:"Chapter IX",t:"The Path",cond:s=>s.trialDone&&s.lvl>=9,
+  txt:"Spring opens the passes. He stands at the gates with two swords on his back — steel for men, silver for monsters.\n\n«The Path is long, and it ends the same way for all of us,» Vesemir says. «Walk it well anyway.»\n\nStronger monsters now roam. Brew oils, manage toxicity, and don't neglect the boy beneath the armour — even witchers need food, rest and a hand of Gwent."},
+ {id:"ch10",ch:"Chapter X",t:"A Grain of Truth",cond:s=>s.trialDone&&s.kills>=8,choice:true,
+  txt:"A village headman offers double coin to kill a 'beast' in the old manor. But the beast speaks. It is cursed, not evil — it begs for mercy, and the curse can be lifted with patience the villagers don't have.\n\nWhat does your witcher do?",
+  choices:[
+   {b:"Lift the curse (no coin, +happiness, the right thing)",fx:s=>{s.happy=clamp(s.happy+25,0,100);toast("The curse breaks. Some monsters are made, not born.","gold");addXp(60);}},
+   {b:"Take the coin (+80 crowns, -happiness)",fx:s=>{s.crowns+=80;s.happy=clamp(s.happy-15,0,100);toast("+80 crowns. The villagers cheer. The boy is quiet that night.","bad");}}
+  ]},
+ {id:"ch11",ch:"Chapter XI",t:"The Striga of Vizima",cond:s=>s.trialDone&&s.lvl>=12,
+  txt:"A royal courier, half-dead from riding, brings a contract sealed in red wax: the king's own daughter, cursed in the womb, buried and risen as a STRIGA. A thousand crowns to lift the curse.\n\nThe striga awaits in the HUNT menu when you dare. Survive until the third crowing of the cock — Yrden and Quen will be your life."},
+ {id:"ch12",ch:"Chapter XII",t:"A Witcher Entire",cond:s=>s.strigaDone,
+  txt:"The princess wakes human, and the kingdom whispers the name of the white-haired witcher.\n\nVesemir meets him on the road, older now, prouder than he'll say. «You did it, wolf. The Path goes on — it always goes on. But tonight, we drink.»\n\nYou have raised a witcher. The valley still breeds monsters, the Gwent decks still shuffle, and winter always returns to Kaer Morhen. The game continues — his story is yours now."}
+];
+
+/* ---------------- GWENT CARDS ---------------- */
+/* row: m=melee r=ranged s=siege; hero cards immune to weather */
+const GWENT_ALL=[
+ {id:"geralt",n:"Geralt of Rivia",p:15,row:"m",hero:true},
+ {id:"ciri",n:"Cirilla",p:15,row:"m",hero:true},
+ {id:"yen",n:"Yennefer",p:10,row:"r",hero:true},
+ {id:"triss",n:"Triss Merigold",p:7,row:"r",hero:true},
+ {id:"vesemir",n:"Vesemir",p:6,row:"m"},
+ {id:"eskel",n:"Eskel",p:6,row:"m"},
+ {id:"lambert",n:"Lambert",p:6,row:"m"},
+ {id:"dandelion",n:"Dandelion",p:2,row:"m"},
+ {id:"zoltan",n:"Zoltan Chivay",p:5,row:"m"},
+ {id:"roche",n:"Vernon Roche",p:10,row:"m",hero:true},
+ {id:"blueStripes",n:"Blue Stripes",p:4,row:"m"},
+ {id:"dunBanner",n:"Dun Banner",p:4,row:"m"},
+ {id:"banArd",n:"Ban Ard Mage",p:5,row:"r"},
+ {id:"sileGate",n:"Síle de Tansarville",p:5,row:"r"},
+ {id:"dijkstra",n:"Sigi Reuven",p:4,row:"s"},
+ {id:"catapult",n:"Catapult",p:8,row:"s"},
+ {id:"ballista",n:"Ballista",p:6,row:"s"},
+ {id:"trebuchet",n:"Trebuchet",p:6,row:"s"},
+ {id:"crinfrid",n:"Crinfrid Reavers",p:5,row:"r"},
+ {id:"elfArcher",n:"Vrihedd Archer",p:4,row:"r"},
+ {id:"frost",n:"Biting Frost",p:0,row:"w",weather:"m"},
+ {id:"fog",n:"Impenetrable Fog",p:0,row:"w",weather:"r"},
+ {id:"rain",n:"Torrential Rain",p:0,row:"w",weather:"s"},
+ {id:"clear",n:"Clear Weather",p:0,row:"w",weather:"clear"},
+ {id:"scorch",n:"Scorch",p:0,row:"w",scorch:true}
+];
+const GWENT_STARTER=["vesemir","eskel","lambert","dandelion","zoltan","blueStripes","dunBanner","banArd","crinfrid","elfArcher","catapult","ballista","frost","clear"];
+const GWENT_FOES=[
+ {n:"Lambert",diff:0.8,reward:15},
+ {n:"Eskel",diff:0.9,reward:20},
+ {n:"Vesemir",diff:1.0,reward:30},
+ {n:"Travelling Merchant",diff:1.1,reward:45},
+ {n:"Master of Oxenfurt",diff:1.25,reward:70}
+];
+
+/* ---------------- CONTRACTS ---------------- */
+const CONTRACT_POOL=[
+ {t:"Drowners by the ford",m:"drowner",pay:30},
+ {t:"Ghoul in the graveyard",m:"ghoul",pay:45},
+ {t:"Nekkers under the bridge",m:"nekker",pay:38},
+ {t:"Wraith of the old mill",m:"wraith",pay:60},
+ {t:"Werewolf of the pinewood",m:"werewolf",pay:85},
+ {t:"The noonwraith's field",m:"noonwraith",pay:95},
+ {t:"Griffin nesting on the crag",m:"griffin",pay:130},
+ {t:"Leshen of the black grove",m:"leshen",pay:170}
+];
+
+/* ---------------- STATE ---------------- */
+const SAVE_KEY="witcherpet_v1";
+let S=null;           // game state
+let inCombat=false, inGwent=false;
+
+function newState(name){
+ return {
+  name:name||"Geralt", born:Date.now(), last:Date.now(),
+  health:90,hunger:80,energy:90,happy:85,clean:90,tox:0,
+  lvl:1,xp:0,skillPts:0,crowns:15,kills:0,
+  sleeping:false, trialDone:false, strigaDone:false,
+  skills:{}, inv:{herbs:{celandine:1,verbena:1},potions:{},oils:{},food:{milk:2,porridge:1}},
+  activeOil:null, buffs:{}, deck:GWENT_STARTER.slice(),
+  storySeen:[], contracts:[], contractTime:0,
+  gwentWins:0, dead:false, log:[]
+ };
+}
+const sHelp={
+ age(){return (Date.now()-S.born)/86400000;},
+ stageKey(){
+   const d=this.age();let k="infant";
+   for(const st of STAGES){if(d>=st.minDays)k=st.key;}
+   if(!S.trialDone&&k==="witcher")k="apprentice"; // can't be witcher before the Trial
+   return k;
+ },
+ get lvl(){return S.lvl;},get trialDone(){return S.trialDone;},
+ get kills(){return S.kills;},get strigaDone(){return S.strigaDone;},
+ get happy(){return S.happy;},set happy(v){S.happy=v;},
+ get crowns(){return S.crowns;},set crowns(v){S.crowns=v;}
+};
+function stage(){return STAGES.find(s=>s.key===sHelp.stageKey());}
+function save(){S.last=Date.now();try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const r=localStorage.getItem(SAVE_KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
+
+/* ---------------- XP / LEVEL ---------------- */
+function xpNeed(l){return Math.floor(40*Math.pow(l,1.45));}
+function addXp(n){
+ S.xp+=n;
+ while(S.xp>=xpNeed(S.lvl)){
+   S.xp-=xpNeed(S.lvl);S.lvl++;S.skillPts++;
+   toast("⭐ "+S.name+" reached level "+S.lvl+"! +1 skill point","gold");
+   geraltEmote("jump");
+ }
+ refreshHud();
+}
+function skillRank(k){return S.skills[k]||0;}
+
+/* ---------------- STAT DECAY (per real minute) ---------------- */
+const DECAY={hunger:0.21,energy:0.105,happy:0.14,clean:0.07,tox:-0.5};
+function applyMinutes(min,offline){
+ const st=sHelp.stageKey();
+ const mult=st==="infant"?1.25:1;     // babies need more care
+ S.hunger=clamp(S.hunger-DECAY.hunger*mult*min,0,100);
+ S.clean =clamp(S.clean -DECAY.clean*min,0,100);
+ S.tox   =clamp(S.tox   +DECAY.tox*min,0,100);
+ if(S.sleeping){
+   S.energy=clamp(S.energy+0.5*min,0,100);
+   if(S.energy>=100&&!offline){S.sleeping=false;toast(S.name+" wakes up rested.");}
+ }else{
+   S.energy=clamp(S.energy-DECAY.energy*min,0,100);
+   S.happy =clamp(S.happy -DECAY.happy*(offline?0.6:1)*min,0,100);
+ }
+ // health pressure
+ let dh=0;
+ if(S.hunger<=5)dh-=0.18*min;
+ if(S.clean<=5)dh-=0.06*min;
+ if(S.tox>=80)dh-=0.12*min;
+ if(S.hunger>40&&S.energy>30&&S.tox<50)dh+=0.08*min; // natural recovery
+ S.health=clamp(S.health+dh,1,100);   // never fully dies — witchers are tough
+}
+
+/* ---------------- OFFLINE CATCH-UP ---------------- */
+function offlineSim(){
+ const gone=Math.min(Date.now()-S.last,48*3600000); // cap 48h
+ const min=gone/60000;
+ if(min<2)return;
+ applyMinutes(min,true);
+ const hrs=Math.floor(min/60);
+ const events=[];
+ if(hrs>=1)events.push("While you were away ("+(hrs>0?hrs+"h":Math.floor(min)+"m")+"): ");
+ // offline monster raids for post-trial witchers
+ if(S.trialDone){
+   const raids=Math.min(Math.floor(min/300),4); // every ~5h, max 4
+   for(let i=0;i<raids;i++){
+     const m=pickMonsterForLevel();
+     if(Math.random()<0.45+skillRank("quen")*0.12){
+       const c=ri(...MONSTERS[m].crowns);S.crowns+=c;S.kills++;addXp(Math.floor(MONSTERS[m].xp*0.6));
+       events.push("⚔️ Fought off a "+MONSTERS[m].n+" (+"+c+" crowns)");
+     }else{
+       S.health=clamp(S.health-ri(8,18),1,100);
+       events.push("🩸 A "+MONSTERS[m].n+" attacked — he was wounded driving it off");
+     }
+   }
+ }
+ if(S.hunger<=10)events.push("🍗 He is STARVING.");
+ if(S.clean<=10)events.push("🧼 He desperately needs a bath.");
+ if(events.length)setTimeout(()=>{events.forEach((e,i)=>setTimeout(()=>toast(e,e.includes("🩸")?"bad":""),i*900));},1200);
+}
+function pickMonsterForLevel(){
+ const ok=Object.keys(MONSTERS).filter(k=>!MONSTERS[k].boss&&MONSTERS[k].lvl<=S.lvl+1);
+ return ok.length?ok[ok.length-ri(1,Math.min(3,ok.length))]:"wolf";
+}
+
+/* ---------------- MOOD ---------------- */
+function mood(){
+ if(S.sleeping)return"sleep";
+ if(S.health<25)return"hurt";
+ if(S.hunger<20)return"hungry";
+ if(S.happy<25)return"sad";
+ if(S.happy>75&&S.energy>50)return"happy";
+ return"calm";
+}
+
+/* =====================================================================
+   3D WORLD (Three.js r128)
+   ===================================================================== */
+let renderer,scene,camera,clock,geralt,monster3d=null,fireLight,flame,skyU={};
+let emoteQ=[],blinkT=2,raycaster,tapV;
+const DAY_COL=new THREE.Color(0x7fa6c9),DUSK_COL=new THREE.Color(0x3a2b4a),NIGHT_COL=new THREE.Color(0x0a1024);
+
+function initWorld(){
+ renderer=new THREE.WebGLRenderer({canvas:$("c3d"),antialias:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.shadowMap.enabled=true;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ scene=new THREE.Scene();
+ scene.fog=new THREE.Fog(0x7fa6c9,18,60);
+ camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,120);
+ camera.position.set(0,2.4,7.2);
+ camera.lookAt(0,1.1,0);
+ clock=new THREE.Clock();
+ raycaster=new THREE.Raycaster();tapV=new THREE.Vector2();
+
+ skyU.hemi=new THREE.HemisphereLight(0xcfe5ff,0x4a3b28,0.9);scene.add(skyU.hemi);
+ skyU.sun=new THREE.DirectionalLight(0xfff2d8,1.0);
+ skyU.sun.position.set(6,10,4);skyU.sun.castShadow=true;
+ skyU.sun.shadow.mapSize.set(1024,1024);
+ skyU.sun.shadow.camera.left=-12;skyU.sun.shadow.camera.right=12;
+ skyU.sun.shadow.camera.top=12;skyU.sun.shadow.camera.bottom=-12;
+ scene.add(skyU.sun);
+
+ // ground
+ const g=new THREE.Mesh(new THREE.CircleGeometry(60,40),
+   new THREE.MeshStandardMaterial({color:0x55683a,roughness:1}));
+ g.rotation.x=-Math.PI/2;g.receiveShadow=true;scene.add(g);
+ // dirt patch
+ const dirt=new THREE.Mesh(new THREE.CircleGeometry(4.5,28),
+   new THREE.MeshStandardMaterial({color:0x6e5a3a,roughness:1}));
+ dirt.rotation.x=-Math.PI/2;dirt.position.y=0.01;scene.add(dirt);
+
+ buildKeep();buildMountains();buildTrees();buildFire();
+ geralt=buildGeralt();scene.add(geralt.grp);
+
+ addEventListener("resize",()=>{
+   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+   renderer.setSize(innerWidth,innerHeight);
+ });
+ $("c3d").addEventListener("pointerdown",onTap);
+ requestAnimationFrame(loop);
+}
+function mat(c,r){return new THREE.MeshStandardMaterial({color:c,roughness:r==null?0.9:r});}
+
+function buildKeep(){
+ const k=new THREE.Group();
+ const stone=mat(0x6b6760),roofM=mat(0x3a3530);
+ const wall=new THREE.Mesh(new THREE.BoxGeometry(14,4.5,1.6),stone);
+ wall.position.set(0,2.25,-14);wall.castShadow=true;k.add(wall);
+ [[-7,-14],[7,-14],[-3,-17],[3,-17]].forEach(p=>{
+   const t=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.5,7.5,8),stone);
+   t.position.set(p[0],3.75,p[1]);t.castShadow=true;k.add(t);
+   const roof=new THREE.Mesh(new THREE.ConeGeometry(1.7,2.2,8),roofM);
+   roof.position.set(p[0],8.6,p[1]);k.add(roof);
+ });
+ const main=new THREE.Mesh(new THREE.BoxGeometry(7,6.5,5),stone);
+ main.position.set(0,3.25,-17.5);main.castShadow=true;k.add(main);
+ const mroof=new THREE.Mesh(new THREE.ConeGeometry(5,3,4),roofM);
+ mroof.position.set(0,8,-17.5);mroof.rotation.y=Math.PI/4;k.add(mroof);
+ // gate
+ const gate=new THREE.Mesh(new THREE.BoxGeometry(2.4,3,0.3),mat(0x4a3520));
+ gate.position.set(0,1.5,-13.1);k.add(gate);
+ scene.add(k);
+}
+function buildMountains(){
+ const m=mat(0x5a6470);
+ for(let i=0;i<14;i++){
+   const a=(i/14)*Math.PI*2;
+   const peak=new THREE.Mesh(new THREE.ConeGeometry(rnd(6,11),rnd(12,22),5),m);
+   peak.position.set(Math.sin(a)*42,0,Math.cos(a)*42 - 6);
+   scene.add(peak);
+   const snow=new THREE.Mesh(new THREE.ConeGeometry(rnd(1.5,2.6),rnd(3,5),5),mat(0xe8eef5));
+   snow.position.set(peak.position.x,peak.geometry.parameters.height*0.78,peak.position.z);
+   scene.add(snow);
+ }
+}
+function buildTrees(){
+ const trunkM=mat(0x4a3520),leafM=mat(0x2e4a26);
+ const spots=[[-5,2],[5.5,1],[-7,-4],[7,-5],[-4,-8],[4.5,-8.5],[-9,0],[9,-1],[-6,5],[6,5.5],[-2.5,7],[3,7.5]];
+ spots.forEach(p=>{
+   const t=new THREE.Group();
+   const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.26,1.2,6),trunkM);
+   trunk.position.y=0.6;t.add(trunk);
+   let y=1.2,r=1.1;
+   for(let i=0;i<3;i++){
+     const c=new THREE.Mesh(new THREE.ConeGeometry(r,1.5,7),leafM);
+     c.position.y=y+0.7;c.castShadow=true;t.add(c);y+=0.85;r*=0.72;
+   }
+   t.position.set(p[0],0,p[1]);
+   t.scale.setScalar(rnd(0.8,1.3));
+   scene.add(t);
+ });
+}
+function buildFire(){
+ const ring=new THREE.Group();
+ for(let i=0;i<7;i++){const a=i/7*Math.PI*2;
+   const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(0.16),mat(0x7a766e));
+   rock.position.set(Math.sin(a)*0.5,0.08,Math.cos(a)*0.5);ring.add(rock);}
+ const log1=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.8,6),mat(0x3a2a18));
+ log1.rotation.z=Math.PI/2;log1.position.y=0.1;ring.add(log1);
+ flame=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.65,7),
+   new THREE.MeshBasicMaterial({color:0xff8c2a,transparent:true,opacity:0.92}));
+ flame.position.y=0.45;ring.add(flame);
+ fireLight=new THREE.PointLight(0xff9a3a,1.1,7);
+ fireLight.position.set(0,0.8,0);ring.add(fireLight);
+ ring.position.set(2.4,0,1.6);
+ scene.add(ring);
+}
+
+/* ---------------- GERALT MODEL ---------------- */
+function buildGeralt(){
+ const grp=new THREE.Group();
+ const skin=mat(0xe8c49a,0.85),hairM=mat(0xf2f0ea,0.95),tunic=mat(0x4a3a26),dark=mat(0x2a2018);
+ const G={grp,parts:{}};
+ // body
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.42,0.85,10),tunic);
+ body.position.y=0.85;body.castShadow=true;grp.add(body);G.parts.body=body;
+ const belt=new THREE.Mesh(new THREE.CylinderGeometry(0.40,0.42,0.1,10),dark);
+ belt.position.y=0.62;grp.add(belt);
+ // legs
+ const lgeo=new THREE.CylinderGeometry(0.11,0.13,0.45,8);
+ const legL=new THREE.Mesh(lgeo,dark);legL.position.set(-0.16,0.23,0);grp.add(legL);
+ const legR=new THREE.Mesh(lgeo,dark);legR.position.set(0.16,0.23,0);grp.add(legR);
+ // arms
+ const ageo=new THREE.CylinderGeometry(0.085,0.1,0.55,8);
+ const armL=new THREE.Mesh(ageo,tunic);armL.position.set(-0.45,0.95,0);armL.rotation.z=0.25;grp.add(armL);
+ const armR=new THREE.Mesh(ageo,tunic);armR.position.set(0.45,0.95,0);armR.rotation.z=-0.25;grp.add(armR);
+ G.parts.armL=armL;G.parts.armR=armR;
+ const handGeo=new THREE.SphereGeometry(0.09,8,8);
+ const hL=new THREE.Mesh(handGeo,skin);hL.position.set(-0.52,0.68,0);grp.add(hL);
+ const hR=new THREE.Mesh(handGeo,skin);hR.position.set(0.52,0.68,0);grp.add(hR);
+ // head
+ const head=new THREE.Group();
+ const skull=new THREE.Mesh(new THREE.SphereGeometry(0.42,16,14),skin);
+ skull.castShadow=true;head.add(skull);G.parts.skull=skull;
+ // hair: cap + back
+ const hair=new THREE.Mesh(new THREE.SphereGeometry(0.44,16,12,0,Math.PI*2,0,Math.PI*0.55),hairM);
+ hair.position.y=0.05;head.add(hair);
+ const hairBack=new THREE.Mesh(new THREE.SphereGeometry(0.43,12,10,0,Math.PI*2,Math.PI*0.4,Math.PI*0.35),hairM);
+ hairBack.position.set(0,0.02,-0.06);head.add(hairBack);
+ const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.04,0.5,6),hairM);
+ tail.position.set(0,-0.15,-0.42);tail.rotation.x=0.5;tail.visible=false;head.add(tail);
+ G.parts.tail=tail;
+ // eyes
+ const eyeGeo=new THREE.SphereGeometry(0.065,10,10);
+ const eyeM=new THREE.MeshStandardMaterial({color:0x4a6a3a,roughness:0.4});
+ const eyeL=new THREE.Mesh(eyeGeo,eyeM);eyeL.position.set(-0.15,0.02,0.37);head.add(eyeL);
+ const eyeR=new THREE.Mesh(eyeGeo,eyeM);eyeR.position.set(0.15,0.02,0.37);head.add(eyeR);
+ G.parts.eyeL=eyeL;G.parts.eyeR=eyeR;G.eyeM=eyeM;
+ // pupils
+ const pupGeo=new THREE.SphereGeometry(0.028,8,8);
+ const pupM=new THREE.MeshBasicMaterial({color:0x111111});
+ const pL=new THREE.Mesh(pupGeo,pupM);pL.position.set(-0.15,0.02,0.428);head.add(pL);
+ const pR=new THREE.Mesh(pupGeo,pupM);pR.position.set(0.15,0.02,0.428);head.add(pR);
+ // mouth (small box, scales to smile/frown)
+ const mouth=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.03,0.02),new THREE.MeshBasicMaterial({color:0x7a4a3a}));
+ mouth.position.set(0,-0.18,0.4);head.add(mouth);G.parts.mouth=mouth;
+ head.position.y=1.62;grp.add(head);G.parts.head=head;
+ // medallion
+ const med=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.03,8),
+   new THREE.MeshStandardMaterial({color:0xc9a227,metalness:0.7,roughness:0.3}));
+ med.rotation.x=Math.PI/2;med.position.set(0,1.28,0.38);med.visible=false;grp.add(med);
+ G.parts.med=med;
+ // sword on back
+ const sw=new THREE.Group();
+ const blade=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.85,0.015),
+   new THREE.MeshStandardMaterial({color:0xc8cdd4,metalness:0.8,roughness:0.25}));
+ blade.position.y=0.45;sw.add(blade);
+ const hilt=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.05,0.05),mat(0x6a5430));
+ sw.add(hilt);
+ const grip=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.18,6),dark);
+ grip.position.y=-0.11;sw.add(grip);
+ sw.position.set(0.1,1.25,-0.45);sw.rotation.z=0.4;sw.visible=false;
+ grp.add(sw);G.parts.sword=sw;
+ grp.position.set(0,0,1.2);
+ return G;
+}
+function applyStageVisuals(){
+ const st=stage();
+ geralt.grp.scale.setScalar(st.scale);
+ geralt.parts.sword.visible=(st.key==="apprentice"||st.key==="witcher");
+ geralt.parts.med.visible=(st.key!=="infant");
+ geralt.parts.tail.visible=(st.key==="witcher");
+ if(S.trialDone){geralt.eyeM.color.set(0xd9a514);geralt.eyeM.emissive=new THREE.Color(0x553d00);}
+ $("stageLabel").textContent=st.name+" · "+(S.trialDone?"The Path":"Kaer Morhen");
+}
+function geraltEmote(kind){emoteQ.push({kind,t:0});}
+
+/* ---------------- MONSTER MODELS ---------------- */
+function buildMonster(key){
+ const M=MONSTERS[key];const grp=new THREE.Group();
+ const palette={wolf:0x5a5a60,drowner:0x4a7a5a,nekker:0x8a7a5a,ghoul:0x7a6a55,rotfiend:0x8a4a3a,
+   wraith:0x9aa8c8,werewolf:0x4a4038,noonwraith:0xe8d8a0,griffin:0x9a7a4a,leshen:0x3a3328,striga:0x7a3a3a};
+ const c=palette[key]||0x777;
+ const bm=key==="wraith"||key==="noonwraith"
+   ?new THREE.MeshStandardMaterial({color:c,transparent:true,opacity:0.72,roughness:0.6})
+   :mat(c,0.95);
+ const size=0.8+M.lvl*0.09;
+ const body=new THREE.Mesh(new THREE.SphereGeometry(size*0.5,12,10),bm);
+ body.position.y=size*0.62;body.scale.y=1.25;body.castShadow=true;grp.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(size*0.3,12,10),bm);
+ head.position.y=size*1.25;head.castShadow=true;grp.add(head);
+ // glowing eyes
+ const eg=new THREE.SphereGeometry(size*0.05,6,6);
+ const em=new THREE.MeshBasicMaterial({color:0xff3a2a});
+ [-1,1].forEach(s=>{const e=new THREE.Mesh(eg,em);
+   e.position.set(s*size*0.12,size*1.28,size*0.26);grp.add(e);});
+ // claws/arms
+ const am=new THREE.CylinderGeometry(size*0.07,size*0.09,size*0.6,6);
+ [-1,1].forEach(s=>{const a=new THREE.Mesh(am,bm);
+   a.position.set(s*size*0.55,size*0.7,0);a.rotation.z=s*-0.5;grp.add(a);});
+ if(key==="griffin"){ // wings
+   const wg=new THREE.BoxGeometry(size*1.3,size*0.08,size*0.5);
+   [-1,1].forEach(s=>{const w=new THREE.Mesh(wg,bm);
+     w.position.set(s*size*0.85,size*1.0,-size*0.1);w.rotation.z=s*0.45;grp.add(w);});
+ }
+ if(key==="leshen"){ // antlers
+   const ag=new THREE.CylinderGeometry(0.03,0.05,size*0.8,5);
+   [-1,1].forEach(s=>{const a=new THREE.Mesh(ag,mat(0x2a2018));
+     a.position.set(s*size*0.18,size*1.6,0);a.rotation.z=s*0.5;grp.add(a);});
+   grp.scale.y=1.35;
+ }
+ grp.position.set(0,0,-6);
+ grp.userData={baseZ:-2.2,size};
+ return grp;
+}
+
+/* ---------------- RENDER LOOP ---------------- */
+let lastTickReal=Date.now();
+function loop(){
+ requestAnimationFrame(loop);
+ const dt=Math.min(clock.getDelta(),0.1);
+ const t=clock.elapsedTime;
+ if(!S){renderer.render(scene,camera);return;}
+
+ /* day/night by real local time */
+ const hr=new Date().getHours()+new Date().getMinutes()/60;
+ let dayF; // 1=day 0=night
+ if(hr>=7&&hr<18)dayF=1;
+ else if(hr>=18&&hr<21)dayF=1-(hr-18)/3;
+ else if(hr>=5&&hr<7)dayF=(hr-5)/2;
+ else dayF=0;
+ const sky=new THREE.Color().copy(NIGHT_COL).lerp(DAY_COL,dayF);
+ if(dayF<0.5&&dayF>0.1)sky.lerp(DUSK_COL,0.4);
+ scene.background=sky;scene.fog.color=sky;
+ skyU.sun.intensity=0.15+dayF*0.95;
+ skyU.hemi.intensity=0.35+dayF*0.6;
+ fireLight.intensity=1.0+Math.sin(t*9)*0.18+(1-dayF)*0.7;
+ flame.scale.y=1+Math.sin(t*11)*0.18;
+ flame.rotation.y+=dt*2;
+ $("nightTint").style.opacity=(1-dayF)*0.25;
+
+ /* Geralt idle animation */
+ const g=geralt,P=g.parts,mo=mood();
+ if(mo==="sleep"){
+   g.grp.rotation.x+=( -Math.PI/2.2 - g.grp.rotation.x)*0.06;
+   g.grp.position.y+=((0.25)-g.grp.position.y)*0.06;
+   P.head.rotation.x=0;
+ }else{
+   g.grp.rotation.x+=(0-g.grp.rotation.x)*0.08;
+   g.grp.position.y+=(0-g.grp.position.y)*0.08;
+   P.body.position.y=0.85+Math.sin(t*2.2)*0.025;
+   P.head.position.y=1.62+Math.sin(t*2.2+0.4)*0.035;
+   P.head.rotation.y=Math.sin(t*0.5)*0.22;
+   P.armL.rotation.z=0.25+Math.sin(t*2.2)*0.06;
+   P.armR.rotation.z=-0.25-Math.sin(t*2.2)*0.06;
+ }
+ // mouth by mood
+ const sm=P.mouth;
+ if(mo==="happy"){sm.scale.set(1.3,1,1);sm.position.y=-0.165;sm.rotation.z=0;}
+ else if(mo==="sad"||mo==="hungry"){sm.scale.set(0.8,1,1);sm.position.y=-0.2;}
+ else if(mo==="hurt"){sm.scale.set(0.6,1.8,1);}
+ else{sm.scale.set(1,1,1);sm.position.y=-0.18;}
+ // blink
+ blinkT-=dt;
+ if(blinkT<=0){blinkT=rnd(1.8,4.5);P.eyeL.scale.y=0.1;P.eyeR.scale.y=0.1;
+   setTimeout(()=>{P.eyeL.scale.y=1;P.eyeR.scale.y=1;},130);}
+ // emotes
+ if(emoteQ.length){
+   const e=emoteQ[0];e.t+=dt;
+   if(e.kind==="jump"){g.grp.position.y=Math.abs(Math.sin(e.t*9))*0.45*(1-e.t/0.8);if(e.t>0.8)emoteQ.shift();}
+   else if(e.kind==="shake"){g.grp.position.x=Math.sin(e.t*32)*0.12*(1-e.t/0.6);if(e.t>0.6){g.grp.position.x=0;emoteQ.shift();}}
+   else if(e.kind==="spin"){g.grp.rotation.y=e.t/0.7*Math.PI*2;if(e.t>0.7){g.grp.rotation.y=0;emoteQ.shift();}}
+   else emoteQ.shift();
+ }
+ // sleep Z position
+ if(mo==="sleep"){
+   const v=new THREE.Vector3(0.5,1.0,1.2).project(camera);
+   const zEl=$("sleepZ");zEl.style.display="block";
+   zEl.style.left=((v.x*0.5+0.5)*innerWidth)+"px";
+   zEl.style.top=((-v.y*0.5+0.5)*innerHeight-30)+"px";
+ }else $("sleepZ").style.display="none";
+
+ /* monster combat animation */
+ if(monster3d){
+   const m=monster3d,ud=m.userData;
+   m.position.z+=(ud.baseZ-m.position.z)*0.04;
+   m.position.y=Math.abs(Math.sin(t*3))*0.08;
+   m.rotation.y=Math.sin(t*1.2)*0.15;
+   if(ud.lunge){ud.lt=(ud.lt||0)+dt;
+     m.position.z=ud.baseZ+Math.sin(Math.min(ud.lt*6,Math.PI))* -1.2*-1;
+     if(ud.lt>0.55){ud.lunge=false;ud.lt=0;}}
+   if(ud.dying){m.rotation.x+=dt*2.2;m.position.y-=dt*0.7;
+     m.children.forEach(c=>{if(c.material&&c.material.transparent!==true){c.material.transparent=true;}
+       if(c.material)c.material.opacity=Math.max(0,(c.material.opacity==null?1:c.material.opacity)-dt*1.2);});}
+ }
+
+ /* periodic game tick (every 5s of real time) */
+ if(Date.now()-lastTickReal>5000){
+   const min=(Date.now()-lastTickReal)/60000;
+   lastTickReal=Date.now();
+   if(!inCombat&&!inGwent){applyMinutes(min,false);maybeRandomEvent();}
+   refreshHud();save();
+   checkStory();
+ }
+ renderer.render(scene,camera);
+}
+
+/* tap to pet */
+let lastPet=0;
+function onTap(ev){
+ if(inCombat||inGwent||!S)return;
+ tapV.x=(ev.clientX/innerWidth)*2-1;tapV.y=-(ev.clientY/innerHeight)*2+1;
+ raycaster.setFromCamera(tapV,camera);
+ const hits=raycaster.intersectObject(geralt.grp,true);
+ if(hits.length){
+   if(S.sleeping){toast("Shh — he's sleeping.");return;}
+   if(Date.now()-lastPet>3000){
+     lastPet=Date.now();
+     S.happy=clamp(S.happy+3,0,100);
+     geraltEmote("jump");
+     toast(pick(["He giggles.","Hmm.","He grabs your finger.","A rare little smile.","«Wind's howling…» he mumbles."]));
+     refreshHud();
+   }else geraltEmote("spin");
+ }
+}
+
+/* =====================================================================
+   UI / HUD
+   ===================================================================== */
+function toast(msg,kind){
+ const el=document.createElement("div");
+ el.className="toast"+(kind?" "+kind:"");
+ el.textContent=msg;
+ const area=$("logArea");area.appendChild(el);
+ while(area.children.length>3)area.removeChild(area.firstChild);
+ setTimeout(()=>{el.style.transition="opacity .6s";el.style.opacity="0";
+   setTimeout(()=>el.remove(),650);},3400);
+}
+function refreshHud(){
+ if(!S)return;
+ $("petName").textContent=S.name;
+ $("crownNum").textContent=S.crowns;
+ $("lvlNum").textContent="Lv "+S.lvl+(S.skillPts>0?" ●":"");
+ $("xpBar").style.width=(S.xp/xpNeed(S.lvl)*100)+"%";
+ const set=(id,v)=>{const b=$(id);b.style.width=v+"%";
+   b.style.opacity=v<20?(0.55+Math.sin(Date.now()/300)*0.45):1;};
+ set("bHealth",S.health);set("bHunger",S.hunger);set("bEnergy",S.energy);
+ set("bHappy",S.happy);set("bClean",S.clean);set("bTox",S.tox);
+ buildActionBar();
+ applyStageVisuals();
+}
+/* ---------------- ACTION BAR ---------------- */
+function unlocked(act){
+ const st=sHelp.stageKey();
+ switch(act){
+  case"train":case"gwent":return st!=="infant";
+  case"forage":case"alchemy":return st!=="infant"&&S.lvl>=3;
+  case"skills":return st==="apprentice"||st==="witcher";
+  case"hunt":return S.trialDone;
+  case"contracts":return S.trialDone&&S.kills>=1;
+  default:return true;
+ }
+}
+const ACTIONS=[
+ {k:"feed",e:"🍗",n:"Feed",f:()=>openFeed()},
+ {k:"sleep",e:"🛏️",n:"Sleep",f:()=>doSleep()},
+ {k:"wash",e:"🛁",n:"Bathe",f:()=>doWash()},
+ {k:"play",e:"🪀",n:"Play",f:()=>doPlay()},
+ {k:"train",e:"⚔️",n:"Train",f:()=>openTrain()},
+ {k:"forage",e:"🌿",n:"Forage",f:()=>doForage()},
+ {k:"alchemy",e:"⚗️",n:"Alchemy",f:()=>openAlchemy()},
+ {k:"hunt",e:"🗡️",n:"Hunt",f:()=>openHunt()},
+ {k:"contracts",e:"📜",n:"Contracts",f:()=>openContracts()},
+ {k:"gwent",e:"🃏",n:"Gwent",f:()=>openGwentMenu()},
+ {k:"skills",e:"✨",n:"Skills",f:()=>openSkills()},
+ {k:"inv",e:"🎒",n:"Bags",f:()=>openInventory()},
+ {k:"shop",e:"🏪",n:"Shop",f:()=>openShop()},
+ {k:"more",e:"⚙️",n:"More",f:()=>openSettings()}
+];
+let abBuilt="";
+function buildActionBar(){
+ const sig=ACTIONS.map(a=>unlocked(a.k)?1:0).join("")+(S.skillPts>0?"p":"");
+ if(sig===abBuilt)return;abBuilt=sig;
+ const bar=$("actionBar");bar.innerHTML="";
+ ACTIONS.forEach(a=>{
+   const b=document.createElement("button");
+   const un=unlocked(a.k);
+   b.className="abtn"+(un?"":" locked");
+   b.innerHTML='<div class="em">'+a.e+'</div><div>'+a.n+'</div><div class="dot"></div>';
+   if(a.k==="skills"&&S.skillPts>0)b.querySelector(".dot").style.display="block";
+   b.onclick=()=>{if(!un){toast("Not yet — he's too young. Keep raising him.");return;}
+     if(S.sleeping&&!["sleep","more"].includes(a.k)){toast(S.name+" is asleep. Wake him first (Sleep button).");return;}
+     a.f();};
+   bar.appendChild(b);
+ });
+}
+/* ---------------- MODAL ---------------- */
+function openModal(title,html){
+ $("modalTitle").textContent=title;
+ $("modalBody").innerHTML=html;
+ $("modalWrap").classList.add("show");
+}
+function closeModal(){$("modalWrap").classList.remove("show");}
+$("modalClose").onclick=closeModal;
+$("modalWrap").addEventListener("click",e=>{if(e.target===$("modalWrap"))closeModal();});
+
+/* =====================================================================
+   CARE ACTIONS
+   ===================================================================== */
+function openFeed(){
+ const st=sHelp.stageKey();
+ let h='<div class="title2">From the pantry</div>';
+ const owned=Object.keys(S.inv.food).filter(k=>S.inv.food[k]>0);
+ if(!owned.length)h+='<div class="muted">The pantry is empty — buy food at the Shop.</div>';
+ owned.forEach(k=>{const f=FOODS[k];
+   const ok=f.stages.includes(st);
+   h+='<div class="invItem"><div class="em">'+f.e+'</div><div class="grow"><b>'+f.n+'</b> ×'+S.inv.food[k]+
+      '<div class="muted">+'+f.hunger+' food, +'+f.happy+' joy'+(ok?'':' — too tough for his age')+'</div></div>'+
+      '<button class="btn small" '+(ok?'':'disabled')+' onclick="eatFood(\''+k+'\')">Feed</button></div>';
+ });
+ h+='<div class="title2">Potions in the bag</div>';
+ const pots=Object.keys(S.inv.potions).filter(k=>S.inv.potions[k]>0);
+ if(!pots.length)h+='<div class="muted">No potions brewed.</div>';
+ pots.forEach(k=>{const p=POTIONS[k];
+   h+='<div class="invItem"><div class="em">'+p.e+'</div><div class="grow"><b>'+p.n+'</b> ×'+S.inv.potions[k]+
+      '<div class="muted">'+p.desc+' Toxicity +'+p.tox+'</div></div>'+
+      '<button class="btn small" onclick="drinkPotion(\''+k+'\',true)">Drink</button></div>';
+ });
+ openModal("Feed "+S.name,h);
+}
+window.eatFood=function(k){
+ const f=FOODS[k];if(!S.inv.food[k])return;
+ if(S.hunger>=98){toast("He's full to bursting.");return;}
+ S.inv.food[k]--;
+ S.hunger=clamp(S.hunger+f.hunger,0,100);
+ S.happy=clamp(S.happy+f.happy,0,100);
+ addXp(3);geraltEmote("jump");
+ toast(S.name+" devours the "+f.n.toLowerCase()+". "+pick(["Mmm.","He licks the bowl.","Hmm. Not bad."]));
+ closeModal();refreshHud();save();
+};
+window.drinkPotion=function(k,outside){
+ const p=POTIONS[k];if(!S.inv.potions[k])return;
+ const toxAdd=Math.round(p.tox*(1-skillRank("tolerance")*0.15));
+ if(S.tox+toxAdd>100){toast("Too toxic — he'd poison himself!","bad");return;}
+ S.inv.potions[k]--;S.tox=clamp(S.tox+toxAdd,0,100);
+ if(k==="swallow")S.health=clamp(S.health+45,0,100);
+ if(k==="tawnyowl")S.energy=clamp(S.energy+50,0,100);
+ if(k==="whitehoney")S.tox=0;
+ if(k==="cat")S.buffs.cat=true;
+ if(k==="thunderbolt")S.buffs.thunder=true;
+ if(k==="fullmoon")S.buffs.fullmoon=true;
+ toast(p.e+" "+p.n+" — "+(k==="whitehoney"?"toxicity purged.":"the veins on his neck darken…"));
+ geraltEmote("shake");
+ if(outside)closeModal();
+ refreshHud();save();
+ return true;
+};
+function doSleep(){
+ if(S.sleeping){S.sleeping=false;toast(S.name+" wakes up.");}
+ else{
+   S.sleeping=true;
+   toast(S.name+" curls up by the fire. 💤 (energy recovers ~30/hour)");
+ }
+ refreshHud();save();
+}
+function doWash(){
+ if(S.clean>=95){toast("He's already squeaky clean.");return;}
+ S.clean=100;S.happy=clamp(S.happy+4,0,100);
+ geraltEmote("shake");addXp(2);
+ toast("🛁 Scrubbed in the hot springs beneath the keep. He hates it. He's clean.");
+ refreshHud();save();
+}
+function doPlay(){
+ if(S.energy<10){toast("Too tired to play.","bad");return;}
+ S.energy=clamp(S.energy-8,0,100);
+ S.happy=clamp(S.happy+14,0,100);
+ S.hunger=clamp(S.hunger-3,0,100);
+ geraltEmote("spin");addXp(4);
+ const games={infant:["Peek-a-boo behind Vesemir's chair!","He chases a wooden wolf toy."],
+  child:["Hide and seek in the armoury!","Snowball fight with Lambert — Lambert loses."],
+  apprentice:["Sparring games on the wall walk.","He balances along the pendulum beams."],
+  witcher:["Knife-throwing contest. He wins, of course.","A race down the mountain switchbacks."]};
+ toast("🪀 "+pick(games[sHelp.stageKey()]));
+ refreshHud();save();
+}
+function doForage(){
+ if(S.energy<15){toast("Too tired to forage.","bad");return;}
+ S.energy=clamp(S.energy-12,0,100);
+ const n=1+ri(0,1)+skillRank("herbalist");
+ const common=["celandine","verbena","wolfsbane","mandrake"];
+ const rare=["whitegull","vitriol"];
+ const got={};
+ for(let i=0;i<n;i++){
+   const h=Math.random()<0.22?pick(rare):pick(common);
+   S.inv.herbs[h]=(S.inv.herbs[h]||0)+1;got[h]=(got[h]||0)+1;
+ }
+ addXp(5);
+ toast("🌿 Found: "+Object.keys(got).map(k=>HERBS[k].e+" "+HERBS[k].n+(got[k]>1?" ×"+got[k]:"")).join(", "));
+ refreshHud();save();
+}
+function openTrain(){
+ let h='<div class="muted" style="margin-bottom:8px">Training costs 18 energy and burns 8 food, but grants XP. '+
+   'Vesemir: «Again. Slower is smoother, smoother is faster.»</div>';
+ [["sword","⚔️ Sword drills","The pendulum, the comb, the pirouette."],
+  ["sign","✨ Sign focus","Channel will into the fingers."],
+  ["run","🏃 The Killer","Run the mountain trail witchers call The Killer."]].forEach(o=>{
+   h+='<div class="card rowFlex"><div class="grow"><b>'+o[1]+'</b><div class="muted">'+o[2]+'</div></div>'+
+      '<button class="btn small" onclick="doTrain(\''+o[0]+'\')">Train</button></div>';
+ });
+ openModal("Training Yard",h);
+}
+window.doTrain=function(kind){
+ if(S.energy<18){toast("Too exhausted to train.","bad");return;}
+ if(S.hunger<10){toast("He needs food before training.","bad");return;}
+ S.energy=clamp(S.energy-18,0,100);S.hunger=clamp(S.hunger-8,0,100);
+ S.clean=clamp(S.clean-6,0,100);
+ const xp=10+S.lvl*2;addXp(xp);
+ geraltEmote(kind==="run"?"spin":"shake");
+ toast(pick(["Sweat, bruises, progress. +"+xp+" XP","«Again!» +"+xp+" XP","He's getting faster. +"+xp+" XP"]));
+ closeModal();refreshHud();save();
+};
+
+/* =====================================================================
+   ALCHEMY / INVENTORY / SKILLS / SHOP
+   ===================================================================== */
+function recipeHtml(rec){
+ return Object.keys(rec).map(k=>{
+   const have=S.inv.herbs[k]||0;
+   const ok=have>=rec[k];
+   return '<span class="pill" style="'+(ok?'':'color:#e07b6f;border-color:#7a3a30')+'">'+
+     HERBS[k].e+' '+HERBS[k].n+' '+have+'/'+rec[k]+'</span>';
+ }).join("");
+}
+function canBrew(rec){return Object.keys(rec).every(k=>(S.inv.herbs[k]||0)>=rec[k]);}
+function openAlchemy(){
+ let h='<div class="muted" style="margin-bottom:8px">«Precision, wolf cub. A drop too much kills the drinker, not the monster.»</div><div class="title2">Potions</div>';
+ Object.keys(POTIONS).forEach(k=>{const p=POTIONS[k];
+   h+='<div class="card"><div class="rowFlex"><div class="em" style="font-size:22px">'+p.e+'</div>'+
+      '<div class="grow"><b>'+p.n+'</b> <span class="muted">(have '+(S.inv.potions[k]||0)+')</span>'+
+      '<div class="muted">'+p.desc+' Tox +'+p.tox+'</div></div>'+
+      '<button class="btn small" '+(canBrew(p.recipe)?'':'disabled')+' onclick="brew(\''+k+'\',false)">Brew</button></div>'+
+      '<div style="margin-top:6px">'+recipeHtml(p.recipe)+'</div></div>';
+ });
+ h+='<div class="title2">Blade Oils</div>';
+ Object.keys(OILS).forEach(k=>{const o=OILS[k];
+   h+='<div class="card"><div class="rowFlex"><div class="em" style="font-size:22px">'+o.e+'</div>'+
+      '<div class="grow"><b>'+o.n+'</b> <span class="muted">(have '+(S.inv.oils[k]||0)+')</span>'+
+      '<div class="muted">'+o.desc+(S.activeOil===k?' <b style="color:var(--gold2)">— APPLIED</b>':'')+'</div></div>'+
+      ((S.inv.oils[k]||0)>0&&S.activeOil!==k?'<button class="btn small" onclick="applyOil(\''+k+'\')">Apply</button>':'')+
+      '<button class="btn small" '+(canBrew(o.recipe)?'':'disabled')+' onclick="brew(\''+k+'\',true)">Mix</button></div>'+
+      '<div style="margin-top:6px">'+recipeHtml(o.recipe)+'</div></div>';
+ });
+ openModal("Alchemy Lab",h);
+}
+window.applyOil=function(k){
+ if(!(S.inv.oils[k]>0))return;
+ S.inv.oils[k]--;S.activeOil=k;
+ toast("🗡️ "+OILS[k].n+" applied to the silver sword (lasts one hunt).","gold");
+ openAlchemy();save();
+};
+window.brew=function(k,isOil){
+ const def=isOil?OILS[k]:POTIONS[k];
+ if(!canBrew(def.recipe))return;
+ Object.keys(def.recipe).forEach(h=>{S.inv.herbs[h]-=def.recipe[h];});
+ const tgt=isOil?S.inv.oils:S.inv.potions;
+ tgt[k]=(tgt[k]||0)+1;
+ addXp(8);
+ toast("⚗️ Brewed "+def.e+" "+def.n+"!","gold");
+ openAlchemy();refreshHud();save();
+};
+function openInventory(){
+ let h='<div class="title2">Herbs & Ingredients</div>';
+ const hs=Object.keys(S.inv.herbs).filter(k=>S.inv.herbs[k]>0);
+ h+=hs.length?hs.map(k=>'<span class="pill">'+HERBS[k].e+' '+HERBS[k].n+' ×'+S.inv.herbs[k]+'</span>').join(""):'<div class="muted">None — go foraging.</div>';
+ h+='<div class="title2">Potions</div>';
+ const ps=Object.keys(S.inv.potions).filter(k=>S.inv.potions[k]>0);
+ h+=ps.length?ps.map(k=>'<span class="pill">'+POTIONS[k].e+' '+POTIONS[k].n+' ×'+S.inv.potions[k]+'</span>').join(""):'<div class="muted">None brewed.</div>';
+ h+='<div class="title2">Oils</div>';
+ const os=Object.keys(S.inv.oils).filter(k=>S.inv.oils[k]>0);
+ h+=os.length?os.map(k=>'<span class="pill">'+OILS[k].e+' '+OILS[k].n+' ×'+S.inv.oils[k]+'</span>').join(""):'<div class="muted">None mixed.</div>';
+ h+='<div class="title2">Food</div>';
+ const fs=Object.keys(S.inv.food).filter(k=>S.inv.food[k]>0);
+ h+=fs.length?fs.map(k=>'<span class="pill">'+FOODS[k].e+' '+FOODS[k].n+' ×'+S.inv.food[k]+'</span>').join(""):'<div class="muted">Pantry empty.</div>';
+ h+='<div class="title2">Gwent Deck ('+S.deck.length+' cards)</div>';
+ h+=S.deck.map(id=>{const c=GWENT_ALL.find(x=>x.id===id);
+   return '<span class="pill"'+(c.hero?' style="color:var(--gold2);border-color:var(--gold)"':'')+'>'+c.n+(c.row!=="w"?" ("+c.p+")":"")+'</span>';}).join("");
+ openModal("Saddlebags",h);
+}
+function openSkills(){
+ let h='<div class="muted" style="margin-bottom:6px">Skill points: <b style="color:var(--gold2)">'+S.skillPts+'</b> — earn more by levelling up.</div>';
+ ["Signs","Sword","Alchemy"].forEach(tree=>{
+   h+='<div class="title2">'+tree+'</div>';
+   Object.keys(SKILLS).filter(k=>SKILLS[k].tree===tree).forEach(k=>{
+     const sk=SKILLS[k],r=skillRank(k);
+     let pips='<div class="skillPips">';
+     for(let i=0;i<sk.max;i++)pips+='<div class="pip'+(i<r?' on':'')+'"></div>';
+     pips+='</div>';
+     h+='<div class="skillRow"><div class="em" style="font-size:20px;width:28px;text-align:center">'+sk.e+'</div>'+
+        '<div class="grow"><b>'+sk.n+'</b> '+pips+'<div class="muted">'+sk.desc+'</div></div>'+
+        '<button class="btn small" '+(S.skillPts>0&&r<sk.max?'':'disabled')+' onclick="learnSkill(\''+k+'\')">+</button></div>';
+   });
+ });
+ openModal("Character — Skills",h);
+}
+window.learnSkill=function(k){
+ if(S.skillPts<=0||skillRank(k)>=SKILLS[k].max)return;
+ S.skillPts--;S.skills[k]=skillRank(k)+1;
+ toast("✨ "+SKILLS[k].n+" → rank "+S.skills[k],"gold");
+ abBuilt="";openSkills();refreshHud();save();
+};
+function openShop(){
+ let h='<div class="muted" style="margin-bottom:8px">The travelling merchant Hattori unrolls his wares. Crowns: <b style="color:var(--gold2)">'+S.crowns+'</b></div><div class="title2">Provisions</div>';
+ Object.keys(FOODS).forEach(k=>{const f=FOODS[k];
+   h+='<div class="invItem"><div class="em">'+f.e+'</div><div class="grow"><b>'+f.n+'</b>'+
+      '<div class="muted">+'+f.hunger+' food · '+f.cost+' crowns</div></div>'+
+      '<button class="btn small" '+(S.crowns>=f.cost?'':'disabled')+' onclick="buyFood(\''+k+'\')">Buy</button></div>';
+ });
+ h+='<div class="title2">Herb bundles</div>';
+ [["celandine",4],["verbena",4],["wolfsbane",5],["mandrake",6],["whitegull",10],["vitriol",8]].forEach(o=>{
+   h+='<div class="invItem"><div class="em">'+HERBS[o[0]].e+'</div><div class="grow"><b>'+HERBS[o[0]].n+'</b>'+
+      '<div class="muted">'+o[1]+' crowns</div></div>'+
+      '<button class="btn small" '+(S.crowns>=o[1]?'':'disabled')+' onclick="buyHerb(\''+o[0]+'\','+o[1]+')">Buy</button></div>';
+ });
+ h+='<div class="title2">Gwent</div>';
+ const missing=GWENT_ALL.filter(c=>!S.deck.includes(c.id));
+ h+='<div class="invItem"><div class="em">🎴</div><div class="grow"><b>Card pack</b>'+
+    '<div class="muted">25 crowns — one random new card'+(missing.length?'':' (collection complete!)')+'</div></div>'+
+    '<button class="btn small" '+(S.crowns>=25&&missing.length?'':'disabled')+' onclick="buyCard()">Buy</button></div>';
+ openModal("Hattori's Wares",h);
+}
+window.buyFood=function(k){const f=FOODS[k];if(S.crowns<f.cost)return;
+ S.crowns-=f.cost;S.inv.food[k]=(S.inv.food[k]||0)+1;toast("Bought "+f.e+" "+f.n);openShop();refreshHud();save();};
+window.buyHerb=function(k,c){if(S.crowns<c)return;
+ S.crowns-=c;S.inv.herbs[k]=(S.inv.herbs[k]||0)+1;toast("Bought "+HERBS[k].e+" "+HERBS[k].n);openShop();refreshHud();save();};
+window.buyCard=function(){
+ const missing=GWENT_ALL.filter(c=>!S.deck.includes(c.id));
+ if(S.crowns<25||!missing.length)return;
+ S.crowns-=25;const c=pick(missing);S.deck.push(c.id);
+ toast("🎴 New card: "+c.n+(c.hero?" (HERO!)":""),"gold");
+ openShop();refreshHud();save();
+};
+function openSettings(){
+ const age=sHelp.age();
+ let h='<div class="card"><b>'+S.name+'</b><div class="muted">Age: '+age.toFixed(1)+' days · Stage: '+stage().name+
+   ' · Level '+S.lvl+'<br>Monsters slain: '+S.kills+' · Gwent wins: '+S.gwentWins+
+   '<br>Trial of the Grasses: '+(S.trialDone?"survived ✅":"not yet")+'</div></div>';
+ h+='<div class="card rowFlex"><div class="grow"><b>🔔 Notifications</b><div class="muted">Be told when he\'s hungry or under attack (works while the app is installed).</div></div>'+
+    '<button class="btn small" onclick="askNotif()">Enable</button></div>';
+ h+='<div class="card rowFlex"><div class="grow"><b>📖 Story so far</b><div class="muted">Re-read unlocked chapters.</div></div>'+
+    '<button class="btn small" onclick="openChapterList()">Open</button></div>';
+ h+='<div class="card rowFlex"><div class="grow"><b>⚠️ Abandon this witcher</b><div class="muted">Erase the save and start over. No take-backs.</div></div>'+
+    '<button class="btn small danger" onclick="resetGame()">Reset</button></div>';
+ h+='<div class="muted" style="margin-top:10px;text-align:center">Witcher Pet — a fan-made Tamagotchi. Tap '+S.name+' to pet him.</div>';
+ openModal("Settings & Lore",h);
+}
+window.openChapterList=function(){
+ let h='';
+ STORY.filter(c=>S.storySeen.includes(c.id)).forEach(c=>{
+   h+='<div class="card"><div class="muted">'+c.ch+'</div><b style="color:var(--gold2)">'+c.t+'</b>'+
+      '<div class="muted" style="margin-top:5px;white-space:pre-line">'+c.txt+'</div></div>';
+ });
+ openModal("The Story So Far",h||'<div class="muted">No chapters yet.</div>');
+};
+window.resetGame=function(){
+ if(confirm("Truly abandon "+S.name+" and erase everything?")){
+   localStorage.removeItem(SAVE_KEY);location.reload();
+ }
+};
+window.askNotif=function(){
+ if(!("Notification" in window)){toast("Notifications not supported here.","bad");return;}
+ Notification.requestPermission().then(p=>{
+   toast(p==="granted"?"🔔 Notifications enabled.":"Notifications declined.");closeModal();
+ });
+};
+
+/* =====================================================================
+   COMBAT
+   ===================================================================== */
+let C=null; // combat state
+function openHunt(){
+ const opts=Object.keys(MONSTERS).filter(k=>{
+   if(MONSTERS[k].boss)return S.lvl>=12&&!S.strigaDone;
+   return MONSTERS[k].lvl<=S.lvl+2;
+ });
+ let h='<div class="muted" style="margin-bottom:8px">The valley below Kaer Morhen. Choose your quarry — higher level means harder fights and richer loot.</div>';
+ opts.forEach(k=>{const m=MONSTERS[k];
+   h+='<div class="card rowFlex"><div class="em" style="font-size:24px">'+m.e+'</div>'+
+      '<div class="grow"><b>'+m.n+'</b>'+(m.boss?' <span style="color:#e07b6f">★ BOSS</span>':'')+
+      '<div class="muted">Lv '+m.lvl+' · weak to '+SKILLS[m.sign].n+' · '+m.crowns[0]+'–'+m.crowns[1]+' crowns</div></div>'+
+      '<button class="btn small" onclick="startCombat(\''+k+'\',0)">Hunt</button></div>';
+ });
+ openModal("The Hunt",h);
+}
+window.startCombat=function(key,contractPay){
+ if(S.energy<20){toast("Too exhausted to fight — rest first.","bad");return;}
+ if(S.health<25){toast("He's too wounded. Heal him first (Swallow potion or rest).","bad");return;}
+ closeModal();
+ const m=MONSTERS[key];
+ const hr=new Date().getHours();
+ const night=(hr>=20||hr<6)&&!S.buffs.cat;
+ C={key,m,contractPay:contractPay||0,
+   ehp:m.hp, ehpMax:m.hp,
+   php:S.health+(S.buffs.fullmoon?40:0), phpMax:100+(S.buffs.fullmoon?40:0),
+   stam:100, shield:0, stunned:false, night, over:false, turn:1};
+ inCombat=true;
+ monster3d=buildMonster(key);scene.add(monster3d);
+ geralt.grp.position.set(0,0,1.2);
+ $("combatHud").classList.add("show");
+ $("enemyName").textContent=m.e+" "+m.n;
+ $("enemyNote").textContent=(night?"🌙 Night — its strikes hit harder. ":"")+"Weak to "+SKILLS[m.sign].n;
+ cLog("A "+m.n.toLowerCase()+" emerges! "+(night?"Darkness favours the beast…":"Steel yourself."));
+ buildCombatBtns();updateCombatHud();
+};
+function cLog(t){$("combatLog").textContent=t;}
+function updateCombatHud(){
+ $("enemyHp").style.width=Math.max(0,C.ehp/C.ehpMax*100)+"%";
+ $("playerPlate").innerHTML="❤️ "+Math.max(0,Math.round(C.php))+"/"+C.phpMax+
+   " · 💨 stamina "+Math.round(C.stam)+(C.shield>0?' · <span class="shieldTag">🛡️ Quen '+C.shield+'</span>':"");
+}
+function buildCombatBtns(){
+ const bar=$("combatBtns");bar.innerHTML="";
+ const mk=(em,label,fn,dis)=>{
+   const b=document.createElement("button");
+   b.className="abtn"+(dis?" locked":"");b.style.width="70px";
+   b.innerHTML='<div class="em">'+em+'</div><div>'+label+'</div><div class="dot"></div>';
+   b.onclick=()=>{if(dis){toast("Can't do that now.");return;}fn();};
+   bar.appendChild(b);
+ };
+ mk("⚔️","Silver",()=>playerAttack());
+ ["igni","aard","quen","yrden"].forEach(sg=>{
+   const r=skillRank(sg);
+   mk(SKILLS[sg].e,SKILLS[sg].n+(r?" "+r:""),()=>castSign(sg),r===0||C.stam<30);
+ });
+ mk("🤸","Dodge",()=>playerDodge());
+ mk("🧪","Potion",()=>combatPotion());
+ mk("🏃","Flee",()=>fleeCombat());
+}
+function dmgMult(){
+ let m=1+skillRank("strength")*0.15;
+ if(S.buffs.thunder)m*=1.5;
+ if(S.activeOil&&OILS[S.activeOil]&&OILS[S.activeOil].vs.includes(C.key))m*=1.4;
+ return m;
+}
+function playerAttack(){
+ if(C.over)return;
+ const base=8+S.lvl*2.2;
+ let d=Math.round(base*dmgMult()*rnd(0.85,1.2));
+ const crit=Math.random()<0.12;if(crit)d=Math.round(d*1.8);
+ C.ehp-=d;C.stam=clamp(C.stam+15,0,100);
+ geraltEmote("shake");monsterHitFlash();
+ cLog("⚔️ Silver bites deep — "+d+" damage"+(crit?" (CRIT!)":"")+".");
+ afterPlayerAction();
+}
+function castSign(sg){
+ if(C.over)return;
+ const r=skillRank(sg);if(!r||C.stam<30)return;
+ C.stam-=30;
+ const weak=C.m.sign===sg?1.6:1;
+ if(sg==="igni"){
+   const d=Math.round((10+r*8)*weak*rnd(0.9,1.15));C.ehp-=d;
+   cLog("🔥 Igni! Flames wash over it — "+d+" damage.");monsterHitFlash();
+ }else if(sg==="aard"){
+   const d=Math.round((6+r*5)*weak);C.ehp-=d;
+   if(Math.random()<0.35+r*0.15){C.stunned=true;cLog("💨 Aard! "+d+" damage — the beast is knocked sprawling (stunned)!");}
+   else cLog("💨 Aard! "+d+" damage.");
+   monsterHitFlash();
+ }else if(sg==="quen"){
+   C.shield=20+r*15;cLog("🛡️ Quen shimmers gold around him — next "+C.shield+" damage absorbed.");
+ }else if(sg==="yrden"){
+   const d=Math.round((8+r*6)*weak);C.ehp-=d;C.m._slowed=true;
+   cLog("🟣 Yrden traps it in violet glyphs — "+d+" damage, its attacks weaken.");monsterHitFlash();
+ }
+ afterPlayerAction();
+}
+function playerDodge(){
+ if(C.over)return;
+ C._dodging=true;C.stam=clamp(C.stam+25,0,100);
+ cLog("🤸 He pirouettes clear, watching for an opening…");
+ afterPlayerAction();
+}
+function combatPotion(){
+ const pots=Object.keys(S.inv.potions).filter(k=>S.inv.potions[k]>0);
+ if(!pots.length){cLog("No potions in the bag! Brew some at the Alchemy lab.");return;}
+ // priority: swallow (heal) > whitehoney (purge) > thunderbolt > first available
+ const k=pots.find(p=>p==="swallow")||pots.find(p=>p==="whitehoney")||
+         pots.find(p=>p==="thunderbolt")||pots[0];
+ if(drinkPotion(k,false)){
+   if(k==="swallow")C.php=clamp(C.php+45,0,C.phpMax);
+   cLog("🧪 He downs a "+POTIONS[k].n+" mid-fight.");
+   afterPlayerAction();
+ }
+}
+function fleeCombat(){
+ if(Math.random()<0.65){endCombat(false,true);}
+ else{cLog("It cuts off his escape!");enemyTurn();}
+}
+function monsterHitFlash(){
+ if(!monster3d)return;
+ monster3d.userData.lunge=false;
+ monster3d.children.forEach(c=>{if(c.material&&c.material.emissive!==undefined){
+   c.material.emissive=new THREE.Color(0x661111);
+   setTimeout(()=>{try{c.material.emissive=new THREE.Color(0x000000);}catch(e){}},160);}});
+}
+function afterPlayerAction(){
+ updateCombatHud();
+ if(C.ehp<=0){endCombat(true);return;}
+ setTimeout(enemyTurn,750);
+}
+function enemyTurn(){
+ if(!C||C.over)return;
+ if(C.stunned){C.stunned=false;cLog(C.m.n+" struggles back to its feet…");updateCombatHud();return;}
+ if(monster3d){monster3d.userData.lunge=true;monster3d.userData.lt=0;}
+ setTimeout(()=>{
+   if(!C||C.over)return;
+   let atk=C.m.atk*(C.night?1.3:1)*(C.m._slowed?0.7:1)*rnd(0.8,1.2);
+   const dodgeCh=0.08+skillRank("reflex")*0.08+(C._dodging?0.45:0);
+   C._dodging=false;
+   if(Math.random()<dodgeCh){cLog("🤸 He slips aside — the blow whistles past!");}
+   else{
+     atk=Math.round(atk);
+     if(C.shield>0){const ab=Math.min(C.shield,atk);C.shield-=ab;atk-=ab;
+       if(ab>0)cLog("🛡️ Quen takes "+ab+" damage"+(atk>0?" — "+atk+" gets through!":" and holds!"));}
+     if(atk>0){C.php-=atk;geraltEmote("shake");
+       cLog("🩸 The "+C.m.n.toLowerCase()+" strikes — "+atk+" damage!");}
+   }
+   C.stam=clamp(C.stam+10,0,100);C.turn++;
+   updateCombatHud();
+   if(C.php<=0)endCombat(false);
+ },520);
+}
+function endCombat(won,fled){
+ C.over=true;
+ const m=C.m,key=C.key;
+ if(won){
+   if(monster3d)monster3d.userData.dying=true;
+   const c=ri(...m.crowns)+(C.contractPay||0);
+   S.crowns+=c;S.kills++;
+   m.loot.forEach(l=>{if(Math.random()<0.8){S.inv.herbs[l]=(S.inv.herbs[l]||0)+1;
+     toast("Loot: "+HERBS[l].e+" "+HERBS[l].n);}});
+   addXp(m.xp);
+   S.health=clamp(C.php,1,100);
+   if(m.boss){S.strigaDone=true;}
+   cLog("☠️ The "+m.n.toLowerCase()+" falls! +"+c+" crowns, +"+m.xp+" XP");
+   toast("🏆 "+m.n+" slain! +"+c+" crowns","gold");
+   geraltEmote("jump");
+ }else if(fled){
+   S.health=clamp(C.php,1,100);
+   cLog("He retreats, living to fight another day.");
+   toast("Fled the fight. No shame in it — Vesemir taught him that.");
+ }else{
+   S.health=8;S.happy=clamp(S.happy-20,0,100);
+   cLog("🩸 He goes down… but witchers are hard to kill.");
+   toast("He was carried back to the keep, badly wounded. Let him rest.","bad");
+   geraltEmote("shake");
+ }
+ S.buffs={};S.activeOil=null;S.energy=clamp(S.energy-15,0,100);S.clean=clamp(S.clean-12,0,100);
+ setTimeout(()=>{
+   inCombat=false;
+   $("combatHud").classList.remove("show");
+   if(monster3d){scene.remove(monster3d);monster3d=null;}
+   C=null;refreshHud();save();checkStory();
+ },won?2000:1600);
+}
+
+/* random monster ambush while playing (post-trial only) */
+let lastAmbush=Date.now();
+function maybeRandomEvent(){
+ if(!S.trialDone||inCombat||inGwent||S.sleeping)return;
+ if(Date.now()-lastAmbush<8*60000)return; // min 8 min between
+ if(Math.random()<0.06){
+   lastAmbush=Date.now();
+   const k=pickMonsterForLevel();
+   toast("⚠️ A "+MONSTERS[k].n+" attacks the camp!","bad");
+   notify("⚔️ Monster attack!","A "+MONSTERS[k].n+" is attacking "+S.name+"!");
+   setTimeout(()=>startCombat(k,0),900);
+ }
+}
+
+/* =====================================================================
+   CONTRACTS
+   ===================================================================== */
+function rollContracts(){
+ const pool=CONTRACT_POOL.filter(c=>MONSTERS[c.m].lvl<=S.lvl+2);
+ S.contracts=[];
+ const n=Math.min(3,pool.length);
+ const shuffled=pool.slice().sort(()=>Math.random()-0.5);
+ for(let i=0;i<n;i++)S.contracts.push(shuffled[i]);
+ S.contractTime=Date.now();
+}
+function openContracts(){
+ if(!S.contracts.length||Date.now()-S.contractTime>6*3600000)rollContracts();
+ let h='<div class="muted" style="margin-bottom:8px">The notice board. New contracts every few hours.</div>';
+ S.contracts.forEach((c,i)=>{const m=MONSTERS[c.m];
+   h+='<div class="card rowFlex"><div class="em" style="font-size:22px">'+m.e+'</div>'+
+      '<div class="grow"><b>'+c.t+'</b><div class="muted">'+m.n+' (Lv '+m.lvl+') · bonus '+c.pay+' crowns</div></div>'+
+      '<button class="btn small" onclick="takeContract('+i+')">Accept</button></div>';
+ });
+ openModal("Notice Board",h);
+}
+window.takeContract=function(i){
+ const c=S.contracts[i];if(!c)return;
+ S.contracts.splice(i,1);
+ startCombat(c.m,c.pay);
+};
+
+/* =====================================================================
+   STORY ENGINE
+   ===================================================================== */
+let storyShowing=false;
+function checkStory(){
+ if(storyShowing||inCombat||inGwent||!S)return;
+ const next=STORY.find(c=>!S.storySeen.includes(c.id)&&c.cond(sHelp));
+ if(next)showStory(next);
+}
+function showStory(c){
+ storyShowing=true;
+ $("storyChapter").textContent=c.ch;
+ $("storyTitle").textContent=c.t;
+ $("storyText").textContent=c.txt;
+ const btns=$("storyBtns");btns.innerHTML="";
+ if(c.trial){
+   const chance=trialChance();
+   const b1=document.createElement("button");b1.className="choiceBtn";
+   b1.textContent="⚗️ Begin the Trial of the Grasses ("+Math.round(chance*100)+"% survival — raise his Health to improve it)";
+   b1.onclick=()=>{doTrial(c);};
+   const b2=document.createElement("button");b2.className="choiceBtn";
+   b2.textContent="⏳ Not yet — he needs more time (you can return; the chapter will reappear)";
+   b2.onclick=()=>{$("storyWrap").classList.remove("show");storyShowing=false;
+     toast("Vesemir nods. «When you're ready. The Grasses don't forgive weakness.»");};
+   btns.appendChild(b1);btns.appendChild(b2);
+ }else if(c.choice){
+   c.choices.forEach(ch=>{
+     const b=document.createElement("button");b.className="choiceBtn";b.textContent=ch.b;
+     b.onclick=()=>{S.storySeen.push(c.id);ch.fx(S);
+       $("storyWrap").classList.remove("show");storyShowing=false;refreshHud();save();};
+     btns.appendChild(b);
+   });
+ }else{
+   const b=document.createElement("button");b.className="choiceBtn";
+   b.style.textAlign="center";b.textContent="Continue";
+   b.onclick=()=>{S.storySeen.push(c.id);
+     $("storyWrap").classList.remove("show");storyShowing=false;refreshHud();save();
+     setTimeout(checkStory,800);};
+   btns.appendChild(b);
+ }
+ $("storyWrap").classList.add("show");
+}
+function trialChance(){
+ return clamp(0.35+S.health/100*0.6+(S.lvl-6)*0.02,0.35,0.97);
+}
+function doTrial(c){
+ S.storySeen.push(c.id);
+ $("storyWrap").classList.remove("show");storyShowing=false;
+ const chance=trialChance();
+ toast("⚗️ The elixirs are administered. The fever begins…","bad");
+ geraltEmote("shake");
+ setTimeout(()=>{
+   if(Math.random()<chance){
+     S.trialDone=true;
+     S.health=100;S.energy=100;S.tox=0;
+     toast("🌟 HE SURVIVES THE GRASSES. His eyes open — golden, cat-slit.","gold");
+     addXp(80);
+     applyStageVisuals();abBuilt="";
+     setTimeout(checkStory,1500);
+   }else{
+     S.health=30;S.happy=clamp(S.happy-25,0,100);
+     toast("He convulses — Vesemir tears the straps off and stops the Trial. He lives, barely. Nurse him back and try again.","bad");
+   }
+   refreshHud();save();
+ },2600);
+}
+
+/* =====================================================================
+   NOTIFICATIONS
+   ===================================================================== */
+function notify(title,body){
+ try{
+   if(!("Notification" in window)||Notification.permission!=="granted")return;
+   if(navigator.serviceWorker&&navigator.serviceWorker.ready){
+     navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,{body,icon:"icon-192.png",badge:"icon-192.png"}));
+   }else new Notification(title,{body,icon:"icon-192.png"});
+ }catch(e){}
+}
+let lastNeedNotif=0;
+setInterval(()=>{
+ if(!S||document.visibilityState==="visible")return;
+ if(Date.now()-lastNeedNotif<45*60000)return;
+ if(S.hunger<15){lastNeedNotif=Date.now();notify("🍗 "+S.name+" is starving!","Open Witcher Pet and feed him.");}
+ else if(S.health<25){lastNeedNotif=Date.now();notify("❤️ "+S.name+" is badly hurt!","He needs a Swallow potion or rest.");}
+ else if(S.happy<15){lastNeedNotif=Date.now();notify("😢 "+S.name+" is miserable…","Play with him or deal him into Gwent.");}
+},60000);
+document.addEventListener("visibilitychange",()=>{
+ if(!S)return;
+ if(document.visibilityState==="hidden"){save();}
+ else{offlineSim();S.last=Date.now();refreshHud();}
+});
+
+/* =====================================================================
+   GWENT
+   ===================================================================== */
+let GW=null;
+function openGwentMenu(){
+ let h='<div class="muted" style="margin-bottom:8px">Best of three rounds. You get ONE hand of 8 cards for the whole match — spend them wisely. Weather hits both sides; heroes ignore it. Wins: '+S.gwentWins+'</div>';
+ GWENT_FOES.forEach((f,i)=>{
+   h+='<div class="card rowFlex"><div class="em" style="font-size:22px">🃏</div>'+
+      '<div class="grow"><b>'+f.n+'</b><div class="muted">Stake: '+f.reward+' crowns'+(i>2?' · tough opponent':'')+'</div></div>'+
+      '<button class="btn small" onclick="startGwent('+i+')">Play</button></div>';
+ });
+ openModal("Gwent — Choose Opponent",h);
+}
+window.startGwent=function(fi){
+ closeModal();
+ const foe=GWENT_FOES[fi];
+ const myPool=S.deck.map(id=>GWENT_ALL.find(c=>c.id===id)).filter(Boolean);
+ const myHand=myPool.slice().sort(()=>Math.random()-0.5).slice(0,8);
+ const foePool=GWENT_ALL.filter(c=>!c.hero||Math.random()<foe.diff-0.7);
+ const foeHand=[];
+ for(let i=0;i<8;i++){
+   const c=Object.assign({},pick(foePool));
+   if(c.row!=="w")c.p=Math.max(1,Math.round(c.p*foe.diff*rnd(0.8,1.1)));
+   foeHand.push(c);
+ }
+ GW={foe,myHand,foeHand,
+   rows:{myM:[],myR:[],myS:[],foeM:[],foeR:[],foeS:[]},
+   weather:{m:false,r:false,s:false},
+   myPassed:false,foePassed:false,
+   myWins:0,foeWins:0,round:1,myTurn:true,busy:false,sel:-1};
+ inGwent=true;
+ $("gwentWrap").classList.add("show");
+ gMsgShow("Round 1 — your move");
+ renderGwent();
+};
+function rowPower(cards,wOn){
+ return cards.reduce((s,c)=>s+(c.hero?c.p:(wOn?1:c.p)),0);
+}
+function sideTotal(side){
+ const r=GW.rows;
+ return rowPower(r[side+"M"],GW.weather.m)+rowPower(r[side+"R"],GW.weather.r)+rowPower(r[side+"S"],GW.weather.s);
+}
+function gMsgShow(t,long){
+ const el=$("gMsg");el.textContent=t;el.style.opacity=1;
+ clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity=0;},long?2600:1500);
+}
+function cardEl(c,small,idx){
+ const d=document.createElement("div");
+ d.className="gCard"+(small?" small":"")+(c.hero?" hero":"")+(c.row==="w"?" weatherC":"");
+ const rowLab=c.row==="m"?"⚔":c.row==="r"?"🏹":c.row==="s"?"💣":(c.scorch?"🔥":"☁");
+ d.innerHTML='<div class="gp">'+(c.row==="w"?(c.scorch?"🔥":"☁"):c.p)+'</div>'+
+   '<div class="gn">'+c.n+'</div><div class="gr">'+rowLab+'</div>';
+ if(idx!=null)d.onclick=()=>selectCard(idx);
+ return d;
+}
+function renderGwent(){
+ const r=GW.rows;
+ const fill=(id,cards,wKey)=>{
+   const el=$(id);
+   el.classList.toggle("weatherOn",wKey?GW.weather[wKey]:false);
+   el.innerHTML='<div class="gRowScore">'+rowPower(cards,wKey?GW.weather[wKey]:false)+'</div>';
+   cards.forEach(c=>el.appendChild(cardEl(c,true)));
+ };
+ fill("gFoeSiege",r.foeS,"s");fill("gFoeRanged",r.foeR,"r");fill("gFoeMelee",r.foeM,"m");
+ fill("gMyMelee",r.myM,"m");fill("gMyRanged",r.myR,"r");fill("gMySiege",r.myS,"s");
+ const my=sideTotal("my"),foe=sideTotal("foe");
+ $("gScores").innerHTML='You <b style="color:'+(my>=foe?'var(--gold2)':'var(--text)')+'">'+my+'</b> · '+
+   GW.foe.n+' <b style="color:'+(foe>my?'#e07b6f':'var(--text)')+'">'+foe+'</b>'+
+   '<div class="muted" style="font-size:11px">Round '+GW.round+' · You '+GW.myWins+'–'+GW.foeWins+' them'+
+   (GW.foePassed?' · they passed':'')+'</div>';
+ const wz=$("gWeatherZone");wz.innerHTML="";
+ [["m","❄️"],["r","🌫️"],["s","🌧️"]].forEach(w=>{
+   if(GW.weather[w[0]]){const s=document.createElement("span");s.textContent=w[1];s.style.fontSize="18px";wz.appendChild(s);}
+ });
+ const hand=$("gHand");hand.innerHTML="";
+ GW.myHand.forEach((c,i)=>{
+   const el=cardEl(c,false,i);
+   if(i===GW.sel)el.classList.add("sel");
+   hand.appendChild(el);
+ });
+ if(!GW.myHand.length&&!GW.myPassed&&GW.myTurn){doPass(true);}
+}
+function selectCard(i){
+ if(!GW.myTurn||GW.busy||GW.myPassed)return;
+ if(GW.sel===i){playCard("my",GW.myHand.splice(i,1)[0]);GW.sel=-1;afterMyMove();}
+ else{GW.sel=i;renderGwent();gMsgShow(GW.myHand[i].row==="w"?"Tap again to play":"Tap again to confirm",false);}
+}
+function playCard(side,c){
+ if(c.row==="w"){
+   if(c.scorch){
+     const foeSide=side==="my"?"foe":"my";
+     const all=[].concat(GW.rows[foeSide+"M"],GW.rows[foeSide+"R"],GW.rows[foeSide+"S"]).filter(x=>!x.hero);
+     if(all.length){
+       const max=Math.max(...all.map(x=>x.p));
+       ["M","R","S"].forEach(rw=>{GW.rows[foeSide+rw]=GW.rows[foeSide+rw].filter(x=>x.hero||x.p<max);});
+       gMsgShow("🔥 Scorch! Strongest enemy unit destroyed");
+     }else gMsgShow("Scorch fizzles — nothing to burn");
+   }else if(c.weather==="clear"){GW.weather={m:false,r:false,s:false};gMsgShow("☀️ Skies clear");}
+   else{GW.weather[c.weather]=true;gMsgShow(c.n+"!");}
+ }else{
+   const rw=c.row==="m"?"M":c.row==="r"?"R":"S";
+   GW.rows[side+rw].push(c);
+ }
+}
+function afterMyMove(){
+ GW.myTurn=false;GW.busy=true;renderGwent();
+ setTimeout(foeMove,900);
+}
+$("gPassBtn").onclick=()=>{if(GW&&GW.myTurn&&!GW.busy)doPass(false);};
+$("gQuitBtn").onclick=()=>{if(GW&&confirm("Forfeit the match?"))endGwent(false,true);};
+function doPass(auto){
+ GW.myPassed=true;GW.myTurn=false;GW.busy=true;
+ gMsgShow(auto?"Out of cards — you pass":"You pass");
+ renderGwent();
+ setTimeout(foeMove,900);
+}
+function foeMove(){
+ if(!GW)return;
+ if(GW.foePassed){GW.busy=false;GW.myTurn=true;checkRoundEnd();renderGwent();return;}
+ const my=sideTotal("my"),foe=sideTotal("foe");
+ // pass logic
+ if(!GW.foeHand.length||
+    (GW.myPassed&&foe>my)||
+    (GW.myPassed&&!GW.foeHand.length)||
+    (!GW.myPassed&&foe-my>14&&Math.random()<0.5&&GW.round<3)){
+   GW.foePassed=true;gMsgShow(GW.foe.n+" passes");
+   GW.busy=false;GW.myTurn=true;checkRoundEnd();renderGwent();return;
+ }
+ // choose a card
+ let idx=-1;
+ const units=GW.foeHand.map((c,i)=>({c,i})).filter(x=>x.c.row!=="w");
+ const weathers=GW.foeHand.map((c,i)=>({c,i})).filter(x=>x.c.row==="w");
+ // smart-ish: scorch if player has big unit
+ const myAll=[].concat(GW.rows.myM,GW.rows.myR,GW.rows.myS).filter(x=>!x.hero);
+ const sc=weathers.find(w=>w.c.scorch);
+ if(sc&&myAll.length&&Math.max(...myAll.map(x=>x.p))>=8)idx=sc.i;
+ else if(weathers.length&&!weathers[0].c.scorch&&weathers[0].c.weather!=="clear"&&Math.random()<0.3&&my>foe)idx=weathers[0].i;
+ else if(units.length){
+   units.sort((a,b)=>a.c.p-b.c.p);
+   idx=(foe<=my)?units[units.length-1].i:units[0].i; // behind: strongest; ahead: weakest
+ }else idx=weathers.length?weathers[0].i:-1;
+ if(idx<0){GW.foePassed=true;gMsgShow(GW.foe.n+" passes");}
+ else{
+   const c=GW.foeHand.splice(idx,1)[0];
+   playCard("foe",c);
+   if(c.row!=="w")gMsgShow(GW.foe.n+" plays "+c.n+" ("+c.p+")");
+ }
+ GW.busy=false;GW.myTurn=!GW.myPassed;
+ if(GW.myPassed&&!GW.foePassed){renderGwent();setTimeout(foeMove,1000);return;}
+ checkRoundEnd();renderGwent();
+}
+function checkRoundEnd(){
+ if(!GW.myPassed||!GW.foePassed)return;
+ const my=sideTotal("my"),foe=sideTotal("foe");
+ let msg;
+ if(my>foe){GW.myWins++;msg="🏆 You take round "+GW.round;}
+ else if(foe>my){GW.foeWins++;msg=GW.foe.n+" takes round "+GW.round;}
+ else{GW.myWins++;GW.foeWins++;msg="Round "+GW.round+" drawn — both take it";}
+ gMsgShow(msg,true);
+ if(GW.myWins>=2&&GW.foeWins>=2)return setTimeout(()=>endGwent(GW.myWins>=GW.foeWins,false),1800);
+ if(GW.myWins>=2)return setTimeout(()=>endGwent(true,false),1800);
+ if(GW.foeWins>=2)return setTimeout(()=>endGwent(false,false),1800);
+ // next round
+ GW.round++;
+ setTimeout(()=>{
+   GW.rows={myM:[],myR:[],myS:[],foeM:[],foeR:[],foeS:[]};
+   GW.weather={m:false,r:false,s:false};
+   GW.myPassed=false;GW.foePassed=false;GW.myTurn=true;GW.busy=false;
+   gMsgShow("Round "+GW.round+" — your move",true);
+   renderGwent();
+ },2000);
+}
+function endGwent(won,forfeit){
+ $("gwentWrap").classList.remove("show");
+ inGwent=false;
+ if(won){
+   S.gwentWins++;S.crowns+=GW.foe.reward;
+   S.happy=clamp(S.happy+12,0,100);addXp(15);
+   toast("🃏 Gwent victory! +"+GW.foe.reward+" crowns","gold");
+   const missing=GWENT_ALL.filter(c=>!S.deck.includes(c.id));
+   if(missing.length&&Math.random()<0.35){
+     const c=pick(missing);S.deck.push(c.id);
+     toast("🎴 Won a card: "+c.n+(c.hero?" (HERO!)":""),"gold");
+   }
+   geraltEmote("jump");
+ }else{
+   S.happy=clamp(S.happy-6,0,100);addXp(5);
+   toast(forfeit?"Match forfeited.":"🃏 Lost at Gwent. «Deal again,» he mutters.");
+ }
+ GW=null;refreshHud();save();
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+function startGame(state){
+ S=state;
+ $("bootScreen").style.display="none";
+ offlineSim();
+ refreshHud();applyStageVisuals();
+ setTimeout(checkStory,900);
+}
+function init(){
+ initWorld();
+ const saved=load();
+ if(saved){
+   startGame(saved);
+ }else{
+   $("bootSub").textContent="A storm rages over Kaer Morhen. At the gate: a basket, a blanket, a white-haired infant. The Law of Surprise has been called in…";
+   $("bootForm").style.display="block";
+   $("startBtn").onclick=()=>{
+     const n=$("nameInput").value.trim()||"Geralt";
+     startGame(newState(n));
+     save();
+   };
+ }
+}
+if("serviceWorker" in navigator){
+ addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});
+}
+addEventListener("beforeunload",()=>{if(S)save();});
+init();
+</script>
+</body>
+</html>
