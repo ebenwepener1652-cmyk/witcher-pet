@@ -1,5 +1,5 @@
 /* Witcher Pet service worker — offline cache */
-const CACHE = "witcherpet-v2";
+const CACHE = "witcherpet-v3";
 const ASSETS = [
   "./",
   "./index.html",
