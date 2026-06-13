@@ -447,9 +447,10 @@ function newState(name){
  return {
   name:name||"Geralt", born:Date.now(), last:Date.now(),
   health:90,hunger:80,energy:90,happy:85,clean:90,tox:0,
-  lvl:1,xp:0,skillPts:0,crowns:15,kills:0,
+  lvl:1,xp:0,skillPts:0,crowns:40,kills:0,
   sleeping:false, trialDone:false, strigaDone:false,
-  skills:{}, inv:{herbs:{celandine:1,verbena:1},potions:{},oils:{},food:{milk:2,porridge:1}},
+  skills:{}, inv:{herbs:{celandine:1,verbena:1},potions:{},oils:{},food:{milk:5,porridge:3,apple:2}},
+  pantryAt:0, stipendAt:Date.now(),
   activeOil:null, buffs:{}, deck:GWENT_STARTER.slice(),
   storySeen:[], contracts:[], contractTime:0,
   gwentWins:0, dead:false, log:[]
@@ -1040,7 +1041,8 @@ function loop(){
  if(Date.now()-lastTickReal>5000){
    const min=(Date.now()-lastTickReal)/60000;
    lastTickReal=Date.now();
-   if(!inCombat&&!inGwent){applyMinutes(min,false);maybeRandomEvent();}
+   if(!inCombat&&!inGwent){applyMinutes(min,false);maybeRandomEvent();
+     if(Date.now()-S.stipendAt>20*60000){S.stipendAt=Date.now();S.crowns+=ri(3,6);}}
    refreshHud();save();
    checkStory();
  }
@@ -1151,7 +1153,12 @@ $("modalWrap").addEventListener("click",e=>{if(e.target===$("modalWrap"))closeMo
    ===================================================================== */
 function openFeed(){
  const st=sHelp.stageKey();
- let h='<div class="title2">From the pantry</div>';
+ const cd=Math.max(0,Math.ceil((S.pantryAt-Date.now())/60000));
+ let h='<div class="card"><div class="rowFlex"><div class="em" style="font-size:22px">🥛</div>'+
+   '<div class="grow"><b>Vesemir\'s Pantry</b><div class="muted">'+
+   (cd>0?'Vesemir is refilling the larder — ready in '+cd+' min.':'Free goat\'s milk &amp; porridge from the keep\'s stores. Always something for the boy.')+'</div></div>'+
+   '<button class="btn small" '+(cd>0?'disabled':'')+' onclick="pantryFeed()">Take food</button></div></div>';
+ h+='<div class="title2">From your supplies</div>';
  const owned=Object.keys(S.inv.food).filter(k=>S.inv.food[k]>0);
  if(!owned.length)h+='<div class="muted">The pantry is empty — buy food at the Shop.</div>';
  owned.forEach(k=>{const f=FOODS[k];
@@ -1170,6 +1177,15 @@ function openFeed(){
  });
  openModal("Feed "+S.name,h);
 }
+window.pantryFeed=function(){
+ if(Date.now()<S.pantryAt){toast("The larder's still being restocked.");return;}
+ S.pantryAt=Date.now()+8*60000; // 8 min cooldown
+ S.inv.food.milk=(S.inv.food.milk||0)+2;
+ S.inv.food.porridge=(S.inv.food.porridge||0)+1;
+ if(sHelp.stageKey()!=="infant")S.inv.food.bread=(S.inv.food.bread||0)+1;
+ toast("🥛 Vesemir hands over milk and porridge from the keep stores.","gold");
+ openFeed();refreshHud();save();
+};
 window.eatFood=function(k){
  const f=FOODS[k];if(!S.inv.food[k])return;
  if(S.hunger>=98){toast("He's full to bursting.");return;}
@@ -1934,6 +1950,11 @@ function endGwent(won,forfeit){
    ===================================================================== */
 function startGame(state){
  S=state;
+ if(S.pantryAt==null)S.pantryAt=0;
+ if(S.stipendAt==null)S.stipendAt=Date.now();
+ // rescue any save left starving by the old tight economy
+ if(S.hunger<25){S.inv.food.milk=(S.inv.food.milk||0)+4;S.inv.food.porridge=(S.inv.food.porridge||0)+2;
+   if(S.crowns<20)S.crowns=20;S.pantryAt=0;}
  $("bootScreen").style.display="none";
  offlineSim();
  refreshHud();applyStageVisuals();
