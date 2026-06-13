@@ -1,12 +1,11 @@
 /* Witcher Pet service worker — offline cache */
-const CACHE = "witcherpet-v4";
+const CACHE = "witcherpet-v6";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon-192.png",
-  "./icon-512.png",
-  "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+  "./icon-512.png"
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
